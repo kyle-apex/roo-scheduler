@@ -56,6 +56,7 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 	const [expirationDate, setExpirationDate] = useState<string>("")
 	const [expirationHour, setExpirationHour] = useState<string>("")
 	const [expirationMinute, setExpirationMinute] = useState<string>("00")
+	const [requireActivity, setRequireActivity] = useState<boolean>(false)
 	
 	// Toggle day selection
 	const toggleDay = (day: string) => {
@@ -325,6 +326,40 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 										Expiration time must be after start time
 									</p>
 								)}
+							</div>
+							
+							{/* Activity Requirement Checkbox */}
+							<div className="flex items-center gap-2 mt-2">
+								<div
+									className="flex items-center cursor-pointer"
+									onClick={() => setRequireActivity(!requireActivity)}
+								>
+									<div className={`w-4 h-4 border rounded-xs flex items-center justify-center mr-2 ${
+										requireActivity
+											? "bg-vscode-button-background border-vscode-button-background"
+											: "border-vscode-input-border"
+									}`}>
+										{requireActivity && (
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												width="10"
+												height="10"
+												viewBox="0 0 24 24"
+												fill="none"
+												stroke="currentColor"
+												strokeWidth="3"
+												strokeLinecap="round"
+												strokeLinejoin="round"
+												className="text-vscode-button-foreground"
+											>
+												<polyline points="20 6 9 17 4 12"></polyline>
+											</svg>
+										)}
+									</div>
+									<label className="text-vscode-descriptionForeground text-sm cursor-pointer">
+										Only execute if I had activity since the last execution of this task
+									</label>
+								</div>
 							</div>
 						</div>
 					)}

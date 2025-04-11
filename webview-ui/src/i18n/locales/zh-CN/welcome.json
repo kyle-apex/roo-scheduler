@@ -1,0 +1,27 @@
+{
+	"greeting": "你好，我是 Roo！",
+	"introduction": "基于最新的AI编程技术，我可以逐步处理复杂软件开发任务。支持创建编辑文件、分析复杂项目、浏览器操作及运行终端命令，不仅能提供代码补全和基础答疑，还能完成更高阶的开发协助。通过MCP系统，我甚至可以自己制作新工具，持续提升解决问题的能力。",
+	"notice": "请先配置大语言模型API提供商",
+	"start": "开始吧！",
+	"chooseProvider": "选择一个 API 提供商开始：",
+	"routers": {
+		"requesty": {
+			"description": "智能调度多个大语言模型",
+			"incentive": "$1 免费额度"
+		},
+		"openrouter": {
+			"description": "统一了大语言模型的接口"
+		}
+	},
+	"startRouter": "通过路由器快速设置",
+	"startCustom": "使用你自己的 API 密钥",
+	"telemetry": {
+		"title": "帮助改进 Roo Code",
+		"changeSettings": "可以随时在<settingsLink>设置</settingsLink>页面底部更改此设置",
+		"settings": "设置",
+		"anonymousTelemetry": "发送匿名的错误和使用数据，以帮助我们修复错误并改进扩展程序。不会涉及代码、提示词或个人隐私信息。",
+		"allow": "允许",
+		"deny": "拒绝"
+	},
+	"or": "或"
+}

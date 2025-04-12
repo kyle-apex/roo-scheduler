@@ -200,7 +200,40 @@ export const webviewMessageHandler = async (provider: any, message: WebviewMessa
 			openImage(message.text!)
 			break
 		case "openFile":
-			openFile(message.text!, message.values as { create?: boolean; content?: string })
+			// Special handling for schedules.json file to ensure it's properly saved
+			if (message.text === "./.roo/schedules.json" && message.values?.content) {
+				try {
+					// Get workspace root
+					const workspaceRoot = getWorkspacePath()
+					if (!workspaceRoot) {
+						throw new Error("No workspace root found")
+					}
+					
+					// Resolve the full path
+					const fullPath = path.join(workspaceRoot, ".roo", "schedules.json")
+					const uri = vscode.Uri.file(fullPath)
+					
+					// Ensure the .roo directory exists
+					const rooDir = path.join(workspaceRoot, ".roo")
+					await vscode.workspace.fs.createDirectory(vscode.Uri.file(rooDir))
+					
+					// Write the file content
+					console.log(`Writing to schedules.json: ${message.values.content}`)
+					await vscode.workspace.fs.writeFile(uri, Buffer.from(message.values.content, "utf8"))
+					
+					// Only open the file if explicitly requested (not for silent saves)
+					if (message.values.open) {
+						const document = await vscode.workspace.openTextDocument(uri)
+						await vscode.window.showTextDocument(document, { preview: false })
+					}
+				} catch (error) {
+					console.error(`Error saving schedules.json: ${error}`)
+					vscode.window.showErrorMessage(`Could not save schedules.json: ${error instanceof Error ? error.message : String(error)}`)
+				}
+			} else {
+				// Default behavior for other files
+				openFile(message.text!, message.values as { create?: boolean; content?: string })
+			}
 			break
 		case "checkpointDiff":
 			const result = checkoutDiffPayloadSchema.safeParse(message.payload)

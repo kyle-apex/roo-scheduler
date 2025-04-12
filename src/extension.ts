@@ -42,6 +42,12 @@ export async function activate(context: vscode.ExtensionContext) {
 	// Migrate old settings to new
 	await migrateSettings(context, outputChannel)
 
+	// Initialize the scheduler service
+	const { SchedulerService } = await import('./services/scheduler/SchedulerService')
+	const schedulerService = SchedulerService.getInstance(context)
+	await schedulerService.initialize()
+	outputChannel.appendLine("Scheduler service initialized")
+
 
 	// Initialize i18n for internationalization support
 	initializeI18n(context.globalState.get("language") ?? formatLanguage(vscode.env.language))
@@ -106,4 +112,6 @@ export async function deactivate() {
 	outputChannel.appendLine("Roo-Code extension deactivated")
 	// Clean up MCP server manager
 	
+	// The scheduler service will be automatically cleaned up when the extension is deactivated
+	// as its timers are registered as disposables in the extension context
 }

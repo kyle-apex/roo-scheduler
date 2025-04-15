@@ -50,6 +50,7 @@
 		"onStartupFinished"
 	],
 	"main": "./dist/extension.js",
+	"extensionDependencies": ["rooveterinaryinc.roo-cline"],
 	"contributes": {
 		"submenus": [
 			{

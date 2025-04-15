@@ -22,9 +22,16 @@ const vscode = {
 			}),
 			all: [],
 		},
+		createOutputChannel: jest.fn().mockReturnValue({
+			appendLine: jest.fn(),
+			dispose: jest.fn(),
+		}),
+		onDidChangeActiveTextEditor: jest.fn().mockReturnValue({ dispose: jest.fn() }),
+		onDidChangeWindowState: jest.fn().mockReturnValue({ dispose: jest.fn() }),
 	},
 	workspace: {
 		onDidSaveTextDocument: jest.fn(),
+		onDidChangeTextDocument: jest.fn().mockReturnValue({ dispose: jest.fn() }),
 		createFileSystemWatcher: jest.fn().mockReturnValue({
 			onDidCreate: jest.fn().mockReturnValue({ dispose: jest.fn() }),
 			onDidDelete: jest.fn().mockReturnValue({ dispose: jest.fn() }),
@@ -33,6 +40,9 @@ const vscode = {
 		fs: {
 			stat: jest.fn(),
 		},
+	},
+	extensions: {
+		getExtension: jest.fn(),
 	},
 	Disposable: class {
 		dispose() {}

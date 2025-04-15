@@ -1,7 +1,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { ClineProvider } from '../../core/webview/ClineProvider';
+import { RooCodeAPI } from '../../roo-code';
 import { getModeBySlug } from '../../shared/modes';
 import { getWorkspacePath } from '../../utils/path';
 import { fileExistsAtPath } from '../../utils/fs';
@@ -38,7 +38,6 @@ export class SchedulerService {
   private schedulesFilePath: string;
   private outputChannel: vscode.OutputChannel;
   private lastActivityTime: number = Date.now();
-  private provider: ClineProvider | undefined;
 
   private constructor(context: vscode.ExtensionContext) {
     this.schedulesFilePath = path.join(getWorkspacePath(), '.roo', 'schedules.json');
@@ -272,35 +271,39 @@ export class SchedulerService {
 
   private async processTask(mode: string, taskInstructions: string): Promise<void> {
     try {
-      // Get the ClineProvider instance
-      if (!this.provider) {
-        this.provider = await ClineProvider.getInstance();
-        if (!this.provider) {
-          throw new Error('Failed to get ClineProvider instance');
-        }
-      }
-
       // Validate the mode
       const modeConfig = getModeBySlug(mode);
       if (!modeConfig) {
         throw new Error(`Invalid mode: ${mode}`);
       }
 
-      // Create a new Cline instance with the specified mode and task
-      const { apiConfiguration, customModePrompts, diffEnabled, enableCheckpoints, checkpointStorage, fuzzyMatchThreshold, experiments } = 
-        await this.provider.getState();
-
-      const modePrompt = customModePrompts?.[mode];
-      const effectiveInstructions = [modePrompt?.customInstructions].filter(Boolean).join("\n\n");
-
-      // Initialize a new task with the specified mode and instructions
-      await this.provider.initClineWithTask(taskInstructions, undefined, undefined, {
-        customInstructions: effectiveInstructions,
-        enableDiff: diffEnabled,
-        enableCheckpoints,
-        checkpointStorage,
-        fuzzyMatchThreshold,
-        experiments
+      // Get the Roo Cline extension
+      const extension = vscode.extensions.getExtension<RooCodeAPI>("rooveterinaryinc.roo-cline");
+      
+      if (!extension?.isActive) {
+        throw new Error("Roo Cline extension is not activated");
+      }
+      
+      const api = extension.exports;
+      
+      if (!api) {
+        throw new Error("Roo Cline API is not available");
+      }
+      
+      // Get the current configuration
+      const config = api.getConfiguration();
+      
+      // Set the mode in the configuration
+      const updatedConfig = {
+        ...config,
+        mode,
+        customModePrompts: config.customModePrompts || {}
+      };
+      
+      // Start a new task with the specified mode and instructions
+      await api.startNewTask({
+        configuration: updatedConfig,
+        text: taskInstructions
       });
 
       this.log(`Successfully started task with mode "${mode}"`);

@@ -3,6 +3,16 @@ import { Button } from "../../components/ui/button"
 import { Input } from "../../components/ui/input"
 import { Badge } from "../../components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs"
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "../../components/ui/alert-dialog"
 
 import { useExtensionState } from "../../context/ExtensionStateContext"
 import {
@@ -21,33 +31,16 @@ import { Tab, TabContent, TabHeader } from "../common/Tab"
 import i18next from "i18next"
 import { useAppTranslation } from "../../i18n/TranslationContext"
 import { Trans } from "react-i18next"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../../components/ui/card"
-import { ScrollArea } from "../../components/ui/scroll-area"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select"
 import { AutosizeTextarea } from "../../components/ui/autosize-textarea"
 
+// Import new components
+import ScheduleList from "./ScheduleList"
+import ScheduleForm from "./ScheduleForm"
+import { Schedule } from "./types"
+
 type SchedulerViewProps = {
 	onDone: () => void
-}
-
-interface Schedule {
-	id: string;
-	name: string;
-	mode: string;
-	taskInstructions: string;
-	scheduleType: string;
-	timeInterval?: string;
-	timeUnit?: string;
-	selectedDays?: Record<string, boolean>;
-	startDate?: string;
-	startHour?: string;
-	startMinute?: string;
-	expirationDate?: string;
-	expirationHour?: string;
-	expirationMinute?: string;
-	requireActivity?: boolean;
-	createdAt: string;
-	updatedAt: string;
 }
 
 const SchedulerView = ({ onDone }: SchedulerViewProps) => {
@@ -63,6 +56,7 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 	// Schedule list state
 	const [schedules, setSchedules] = useState<Schedule[]>([])
 	const [selectedScheduleId, setSelectedScheduleId] = useState<string | null>(null)
+	const [scheduleToDelete, setScheduleToDelete] = useState<string | null>(null)
 	
 	// State for selected mode and task instructions
 	const [scheduleName, setScheduleName] = useState<string>("")
@@ -156,6 +150,10 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 			return
 		}
 		
+		// Get the mode display name from the available modes
+		const selectedModeConfig = availableModes.find(mode => mode.slug === selectedMode)
+		const modeDisplayName = selectedModeConfig?.name || selectedMode
+		
 		const now = new Date().toISOString()
 		let updatedSchedules = [...schedules]
 		
@@ -167,6 +165,7 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 						...schedule,
 						name: scheduleName,
 						mode: selectedMode,
+						modeDisplayName,
 						taskInstructions,
 						scheduleType,
 						timeInterval,
@@ -189,6 +188,7 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 				id: Date.now().toString(),
 				name: scheduleName,
 				mode: selectedMode,
+				modeDisplayName,
 				taskInstructions,
 				scheduleType,
 				timeInterval,
@@ -369,344 +369,81 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 							<Button onClick={createNewSchedule}>Create New Schedule</Button>
 						</div>
 						
-						{schedules.length === 0 ? (
-							<div className="text-center py-8 text-vscode-descriptionForeground">
-								No schedules found. Create your first schedule to get started.
-							</div>
-						) : (
-							<ScrollArea className="h-[400px]">
-								<div className="space-y-3">
-									{schedules.map(schedule => (
-										<Card key={schedule.id} className="border border-vscode-input-border">
-											<CardHeader className="pb-2">
-												<CardTitle className="text-vscode-foreground">{schedule.name}</CardTitle>
-												<CardDescription>
-													Mode: {schedule.mode} • Type: {schedule.scheduleType === "time" ? "Time Schedule" : "After Task Completion"}
-												</CardDescription>
-											</CardHeader>
-											<CardContent className="pb-2">
-												<p className="text-sm text-vscode-descriptionForeground" style={{ overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
-													{schedule.taskInstructions}
-												</p>
-												{schedule.scheduleType === "time" && (
-													<div className="mt-2 text-xs text-vscode-descriptionForeground">
-														Every {schedule.timeInterval} {schedule.timeUnit}(s)
-														{Object.values(schedule.selectedDays || {}).filter(Boolean).length > 0 && (
-															<span> • {Object.values(schedule.selectedDays || {}).filter(Boolean).length} days selected</span>
-														)}
-													</div>
-												)}
-											</CardContent>
-											<CardFooter className="pt-2 flex justify-end gap-2">
-												<Button 
-													variant="outline" 
-													size="sm"
-													onClick={() => editSchedule(schedule.id)}
-												>
-													Edit
-												</Button>
-												<Button 
-													variant="destructive" 
-													size="sm"
-													onClick={() => deleteSchedule(schedule.id)}
-												>
-													Delete
-												</Button>
-											</CardFooter>
-										</Card>
-									))}
-								</div>
-							</ScrollArea>
-						)}
+						<ScheduleList
+							schedules={schedules}
+							onEdit={editSchedule}
+							onDeleteRequest={setScheduleToDelete}
+						/>
 					</TabsContent>
 					
 					<TabsContent value="edit">
-						<div className="flex flex-col gap-5">
-							<div className="flex flex-col gap-3">
-								<h4 className="text-vscode-foreground text-lg font-medium m-0">
-									{isEditing ? "Edit Schedule" : "Create New Schedule"}
-								</h4>
-								
-								<div className="flex flex-col gap-2">
-									<label className="text-vscode-descriptionForeground text-sm">Schedule Name</label>
-									<Input
-										className="w-full"
-										placeholder="Enter schedule name..."
-										value={scheduleName}
-										onChange={(e) => setScheduleName(e.target.value)}
-									/>
-								</div>
-								
-								<div className="flex flex-col gap-3 mt-4">
-									<h4 className="text-vscode-foreground text-lg font-medium m-0">Task</h4>
-									
-									<div className="flex flex-col gap-2">
-										<label className="text-vscode-descriptionForeground text-sm">Mode</label>
-										<Select value={selectedMode} onValueChange={setSelectedMode}>
-											<SelectTrigger className="w-full bg-vscode-dropdown-background !bg-vscode-dropdown-background hover:!bg-vscode-dropdown-background border border-vscode-dropdown-border">
-												<SelectValue placeholder="Select a mode" />
-											</SelectTrigger>
-											<SelectContent>
-												{availableModes.map((mode) => (
-													<SelectItem key={mode.slug} value={mode.slug}>
-														{mode.name}
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
-									</div>
-									
-									<div className="flex flex-col gap-2">
-										<label className="text-vscode-descriptionForeground text-sm">Instructions</label>
-										<AutosizeTextarea
-											className="w-full p-3 bg-vscode-input-background !bg-vscode-input-background border border-vscode-input-border"
-											minHeight={100}
-											maxHeight={300}
-											placeholder="Enter task instructions..."
-											value={taskInstructions}
-											onChange={(e) => setTaskInstructions(e.target.value)}
-										/>
-									</div>
-								</div>
-							</div>
-
-							<div className="flex flex-col gap-3">
-								<h4 className="text-vscode-foreground text-lg font-medium m-0">Schedule</h4>
-								
-								<div className="flex flex-col gap-2">
-									<label className="text-vscode-descriptionForeground text-sm">Schedule Type</label>
-									<Select value={scheduleType} onValueChange={setScheduleType}>
-										<SelectTrigger className="w-full bg-vscode-dropdown-background !bg-vscode-dropdown-background hover:!bg-vscode-dropdown-background border border-vscode-dropdown-border">
-											<SelectValue placeholder="Select a schedule type" />
-										</SelectTrigger>
-										<SelectContent>
-											<SelectItem value="time">Time Schedule</SelectItem>
-											<SelectItem value="completion">After Task Completion</SelectItem>
-										</SelectContent>
-									</Select>
-								</div>
-								
-								{scheduleType === "time" && (
-									<div className="flex flex-col gap-3 mt-2">
-										<div className="flex items-center gap-2">
-											<label className="text-vscode-descriptionForeground text-sm">Every</label>
-											<Input
-												type="number"
-												min="1"
-												className="w-16 h-7"
-												value={timeInterval}
-												onChange={(e) => {
-													// Ensure positive numbers only
-													const value = parseInt(e.target.value);
-													if (!isNaN(value) && value > 0) {
-														setTimeInterval(value.toString());
-													} else if (e.target.value === '') {
-														setTimeInterval('');
-													}
-												}}
-												aria-label="Time interval"
-											/>
-											<Select value={timeUnit} onValueChange={setTimeUnit}>
-												<SelectTrigger className="w-32 bg-vscode-dropdown-background !bg-vscode-dropdown-background hover:!bg-vscode-dropdown-background border border-vscode-dropdown-border">
-													<SelectValue placeholder="Select unit" />
-												</SelectTrigger>
-												<SelectContent>
-													<SelectItem value="minute">Minute(s)</SelectItem>
-													<SelectItem value="hour">Hour(s)</SelectItem>
-													<SelectItem value="day">Day(s)</SelectItem>
-												</SelectContent>
-											</Select>
-										</div>
-										
-										<div className="flex flex-col gap-2">
-											<div className="flex items-center gap-2">
-												<label className="text-vscode-descriptionForeground text-sm">Days of the week</label>
-												{Object.values(selectedDays).filter(Boolean).length > 0 && (
-													<Badge variant="outline" className="bg-vscode-badge-background text-vscode-badge-foreground">
-														{Object.values(selectedDays).filter(Boolean).length} {Object.values(selectedDays).filter(Boolean).length === 1 ? 'day' : 'days'} selected
-													</Badge>
-												)}
-											</div>
-											<div className="flex gap-2 flex-wrap">
-												{[
-													{ label: 'S', day: 'sun' },
-													{ label: 'M', day: 'mon' },
-													{ label: 'T', day: 'tue' },
-													{ label: 'W', day: 'wed' },
-													{ label: 'Th', day: 'thu' },
-													{ label: 'F', day: 'fri' },
-													{ label: 'Sa', day: 'sat' }
-												].map(({ label, day }, index) => (
-													<Button
-														key={day}
-														variant={selectedDays[day] ? "default" : "outline"}
-														className={`min-w-8 h-8 p-0 ${selectedDays[day] ? 'bg-vscode-button-background text-vscode-button-foreground' : 'bg-transparent text-vscode-foreground'}`}
-														onClick={() => toggleDay(day)}
-														aria-label={`Toggle ${day} selection`}
-														aria-pressed={selectedDays[day]}
-													>
-														{label}
-													</Button>
-												))}
-											</div>
-										</div>
-										
-										{/* Start Time */}
-										<div className="flex flex-col gap-2">
-											<label className="text-vscode-descriptionForeground text-sm">Start Time</label>
-											<div className="flex items-center gap-2">
-												<Input
-													type="date"
-													className="w-40"
-													value={startDate}
-													onChange={(e) => setStartDate(e.target.value)}
-													aria-label="Start date"
-												/>
-												<Input
-													type="number"
-													min="0"
-													max="23"
-													className="w-16 h-7"
-													value={startHour}
-													placeholder="HH"
-													onChange={(e) => {
-														const value = parseInt(e.target.value);
-														if (!isNaN(value) && value >= 0 && value <= 23) {
-															setStartHour(value.toString().padStart(2, '0'));
-														} else if (e.target.value === '') {
-															setStartHour('');
-														}
-													}}
-													aria-label="Start hour"
-												/>
-												<span className="text-vscode-descriptionForeground">:</span>
-												<Input
-													type="number"
-													min="0"
-													max="59"
-													className="w-16 h-7"
-													value={startMinute}
-													placeholder="MM"
-													onChange={(e) => {
-														const value = parseInt(e.target.value);
-														if (!isNaN(value) && value >= 0 && value <= 59) {
-															setStartMinute(value.toString().padStart(2, '0'));
-														} else if (e.target.value === '') {
-															setStartMinute('');
-														}
-													}}
-													aria-label="Start minute"
-												/>
-											</div>
-										</div>
-										
-										{/* Expiration Time */}
-										<div className="flex flex-col gap-2">
-											<label className="text-vscode-descriptionForeground text-sm">Expires</label>
-											<div className="flex items-center gap-2">
-												<Input
-													type="date"
-													className="w-40"
-													value={expirationDate}
-													min={startDate}
-													onChange={(e) => setExpirationDate(e.target.value)}
-													aria-label="Expiration date"
-												/>
-												<Input
-													type="number"
-													min="0"
-													max="23"
-													className="w-16 h-7"
-													value={expirationHour}
-													placeholder="HH"
-													onChange={(e) => {
-														const value = parseInt(e.target.value);
-														if (!isNaN(value) && value >= 0 && value <= 23) {
-															setExpirationHour(value.toString().padStart(2, '0'));
-														} else if (e.target.value === '') {
-															setExpirationHour('');
-														}
-													}}
-													aria-label="Expiration hour"
-												/>
-												<span className="text-vscode-descriptionForeground">:</span>
-												<Input
-													type="number"
-													min="0"
-													max="59"
-													className="w-16 h-7"
-													value={expirationMinute}
-													placeholder="MM"
-													onChange={(e) => {
-														const value = parseInt(e.target.value);
-														if (!isNaN(value) && value >= 0 && value <= 59) {
-															setExpirationMinute(value.toString().padStart(2, '0'));
-														} else if (e.target.value === '') {
-															setExpirationMinute('');
-														}
-													}}
-													aria-label="Expiration minute"
-												/>
-											</div>
-											{!validateExpirationTime() && (
-												<p className="text-red-500 text-xs mt-1">
-													Expiration time must be after start time
-												</p>
-											)}
-										</div>
-										
-										{/* Activity Requirement Checkbox */}
-										<div className="flex items-center gap-2 mt-2">
-											<div
-												className="flex items-center cursor-pointer"
-												onClick={() => setRequireActivity(!requireActivity)}
-											>
-												<div className={`w-4 h-4 border rounded-xs flex items-center justify-center mr-2 ${
-													requireActivity
-														? "bg-vscode-button-background border-vscode-button-background"
-														: "border-vscode-input-border"
-												}`}>
-													{requireActivity && (
-														<svg
-															xmlns="http://www.w3.org/2000/svg"
-															width="10"
-															height="10"
-															viewBox="0 0 24 24"
-															fill="none"
-															stroke="currentColor"
-															strokeWidth="3"
-															strokeLinecap="round"
-															strokeLinejoin="round"
-															className="text-vscode-button-foreground"
-														>
-															<polyline points="20 6 9 17 4 12"></polyline>
-														</svg>
-													)}
-												</div>
-												<label className="text-vscode-descriptionForeground text-sm cursor-pointer">
-													Only execute if I had activity since the last execution of this task
-												</label>
-											</div>
-										</div>
-									</div>
-								)}
-							</div>
-						</div>
-						
-						<div className="flex justify-end mt-6 gap-3">
-							<Button variant="outline" onClick={() => {
+						<ScheduleForm
+							scheduleName={scheduleName}
+							selectedMode={selectedMode}
+							taskInstructions={taskInstructions}
+							scheduleType={scheduleType}
+							timeInterval={timeInterval}
+							timeUnit={timeUnit}
+							selectedDays={selectedDays}
+							startDate={startDate}
+							startHour={startHour}
+							startMinute={startMinute}
+							expirationDate={expirationDate}
+							expirationHour={expirationHour}
+							expirationMinute={expirationMinute}
+							requireActivity={requireActivity}
+							isEditing={isEditing}
+							availableModes={availableModes}
+							validateExpirationTime={validateExpirationTime}
+							onScheduleNameChange={setScheduleName}
+							onSelectedModeChange={setSelectedMode}
+							onTaskInstructionsChange={setTaskInstructions}
+							onScheduleTypeChange={setScheduleType}
+							onTimeIntervalChange={setTimeInterval}
+							onTimeUnitChange={setTimeUnit}
+							onToggleDay={toggleDay}
+							onStartDateChange={setStartDate}
+							onStartHourChange={setStartHour}
+							onStartMinuteChange={setStartMinute}
+							onExpirationDateChange={setExpirationDate}
+							onExpirationHourChange={setExpirationHour}
+							onExpirationMinuteChange={setExpirationMinute}
+							onRequireActivityChange={setRequireActivity}
+							onSave={saveSchedule}
+							onCancel={() => {
 								resetForm()
 								setActiveTab("schedules")
-							}}>
-								Cancel
-							</Button>
-							<Button onClick={saveSchedule}>
-								{isEditing ? "Update Schedule" : "Save Schedule"}
-							</Button>
-						</div>
+							}}
+						/>
 					</TabsContent>
 				</Tabs>
 			</TabContent>
+
+			{/* Delete Confirmation Dialog */}
+			<AlertDialog open={scheduleToDelete !== null} onOpenChange={(open) => !open && setScheduleToDelete(null)}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Delete Schedule</AlertDialogTitle>
+						<AlertDialogDescription>
+							Are you sure you want to delete this schedule? This action cannot be undone.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Cancel</AlertDialogCancel>
+						<AlertDialogAction
+							onClick={() => {
+								if (scheduleToDelete) {
+									deleteSchedule(scheduleToDelete);
+									setScheduleToDelete(null);
+								}
+							}}
+							className="bg-vscode-errorForeground hover:bg-vscode-errorForeground/90"
+						>
+							Delete
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</Tab>
 	)
 }

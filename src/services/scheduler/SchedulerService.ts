@@ -10,6 +10,7 @@ interface Schedule {
   id: string;
   name: string;
   mode: string;
+  modeDisplayName?: string;
   taskInstructions: string;
   scheduleType: string;
   timeInterval?: string;

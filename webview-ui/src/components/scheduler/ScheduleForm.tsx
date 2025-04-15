@@ -12,6 +12,11 @@ import DaySelector from "./DaySelector"
 
 export type ScheduleFormData = Omit<Schedule, 'id' | 'createdAt' | 'updatedAt' | 'modeDisplayName'>;
 
+// Make all fields required and non-undefined for local form state
+type RequiredScheduleFormData = {
+  [K in keyof ScheduleFormData]-?: NonNullable<ScheduleFormData[K]>
+}
+
 interface ScheduleFormProps {
   initialData?: Partial<ScheduleFormData>;
   isEditing: boolean;
@@ -26,6 +31,25 @@ const TIME_UNITS = [
   { value: "day", label: "Day(s)" }
 ];
 
+const defaultDays: Record<string, boolean> = { sun: false, mon: false, tue: false, wed: false, thu: false, fri: false, sat: false };
+
+const getDefinedForm = (initialData?: Partial<ScheduleFormData>): RequiredScheduleFormData => ({
+  name: initialData?.name ?? "",
+  mode: initialData?.mode ?? "code",
+  taskInstructions: initialData?.taskInstructions ?? "",
+  scheduleType: initialData?.scheduleType ?? "time",
+  timeInterval: initialData?.timeInterval ?? "1",
+  timeUnit: initialData?.timeUnit ?? "hour",
+  selectedDays: initialData?.selectedDays ?? { ...defaultDays },
+  startDate: initialData?.startDate ?? "",
+  startHour: initialData?.startHour ?? "00",
+  startMinute: initialData?.startMinute ?? "00",
+  expirationDate: initialData?.expirationDate ?? "",
+  expirationHour: initialData?.expirationHour ?? "00",
+  expirationMinute: initialData?.expirationMinute ?? "00",
+  requireActivity: initialData?.requireActivity ?? false
+});
+
 const ScheduleForm: React.FC<ScheduleFormProps> = ({
   initialData,
   isEditing,
@@ -33,75 +57,54 @@ const ScheduleForm: React.FC<ScheduleFormProps> = ({
   onSave,
   onCancel
 }) => {
-  const [scheduleName, setScheduleName] = useState<string>(initialData?.name || "");
-  const [selectedMode, setSelectedMode] = useState<string>(initialData?.mode || "code");
-  const [taskInstructions, setTaskInstructions] = useState<string>(initialData?.taskInstructions || "");
-  const [scheduleType, setScheduleType] = useState<string>(initialData?.scheduleType || "time");
-  const [timeInterval, setTimeInterval] = useState<string>(initialData?.timeInterval || "1");
-  const [timeUnit, setTimeUnit] = useState<string>(initialData?.timeUnit || "hour");
-  const [selectedDays, setSelectedDays] = useState<Record<string, boolean>>(
-    initialData?.selectedDays || {
-      sun: false, mon: false, tue: false, wed: false, thu: false, fri: false, sat: false,
-    }
-  );
-  const [startDate, setStartDate] = useState<string>(initialData?.startDate || "");
-  const [startHour, setStartHour] = useState<string>(initialData?.startHour || "");
-  const [startMinute, setStartMinute] = useState<string>(initialData?.startMinute || "00");
-  const [expirationDate, setExpirationDate] = useState<string>(initialData?.expirationDate || "");
-  const [expirationHour, setExpirationHour] = useState<string>(initialData?.expirationHour || "");
-  const [expirationMinute, setExpirationMinute] = useState<string>(initialData?.expirationMinute || "00");
-  const [requireActivity, setRequireActivity] = useState<boolean>(initialData?.requireActivity || false);
+  const [form, setForm] = useState<RequiredScheduleFormData>(getDefinedForm(initialData));
 
   useEffect(() => {
     if (!isEditing && !initialData?.startDate) {
       const now = new Date();
       const nextHour = (now.getHours() + 1) % 24;
-      setStartDate(now.toISOString().split('T')[0]);
-      setStartHour(nextHour.toString().padStart(2, '0'));
-      setStartMinute('00');
+      setForm(f => ({
+        ...f,
+        startDate: now.toISOString().split('T')[0],
+        startHour: nextHour.toString().padStart(2, '0'),
+        startMinute: '00'
+      }));
     }
   }, [isEditing, initialData]);
 
-  const toggleDay = (day: string) => setSelectedDays(prev => ({ ...prev, [day]: !prev[day] }));
+  const setField = <K extends keyof RequiredScheduleFormData>(key: K, value: RequiredScheduleFormData[K]) =>
+    setForm(f => ({ ...f, [key]: value }));
+
+  const toggleDay = (day: string) =>
+    setForm(f => ({
+      ...f,
+      selectedDays: { ...f.selectedDays, [day]: !f.selectedDays[day] }
+    }));
 
   const validateExpirationTime = useCallback(() => {
-    if (!startDate || !expirationDate) return true;
-    const startDateTime = new Date(`${startDate}T${startHour || '00'}:${startMinute || '00'}:00`);
-    const expirationDateTime = new Date(`${expirationDate}T${expirationHour || '00'}:${expirationMinute || '00'}:00`);
+    if (!form.startDate || !form.expirationDate) return true;
+    const startDateTime = new Date(`${form.startDate}T${form.startHour}:${form.startMinute}:00`);
+    const expirationDateTime = new Date(`${form.expirationDate}T${form.expirationHour}:${form.expirationMinute}:00`);
     return expirationDateTime > startDateTime;
-  }, [startDate, startHour, startMinute, expirationDate, expirationHour, expirationMinute]);
+  }, [form.startDate, form.startHour, form.startMinute, form.expirationDate, form.expirationHour, form.expirationMinute]);
 
   useEffect(() => {
-    if (expirationDate && startDate && new Date(expirationDate) < new Date(startDate)) {
-      setExpirationDate(startDate);
+    if (form.expirationDate && form.startDate && new Date(form.expirationDate) < new Date(form.startDate)) {
+      setField("expirationDate", form.startDate);
     }
-  }, [startDate, expirationDate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.startDate, form.expirationDate]);
 
   const handleSave = () => {
-    if (!scheduleName.trim()) {
+    if (!form.name.trim()) {
       console.error("Schedule name cannot be empty");
       return;
     }
-    if (expirationDate && !validateExpirationTime()) {
+    if (form.expirationDate && !validateExpirationTime()) {
       console.error("Expiration time must be after start time");
       return;
     }
-    onSave({
-      name: scheduleName,
-      mode: selectedMode,
-      taskInstructions,
-      scheduleType,
-      timeInterval,
-      timeUnit,
-      selectedDays,
-      startDate,
-      startHour,
-      startMinute,
-      expirationDate,
-      expirationHour,
-      expirationMinute,
-      requireActivity
-    });
+    onSave(form);
   };
 
   return (
@@ -114,14 +117,14 @@ const ScheduleForm: React.FC<ScheduleFormProps> = ({
           label="Schedule Name"
           className="w-full"
           placeholder="Enter schedule name..."
-          value={scheduleName}
-          onChange={e => setScheduleName(e.target.value)}
+          value={form.name}
+          onChange={e => setField("name", e.target.value)}
         />
         <div className="flex flex-col gap-3 mt-4">
           <h4 className="text-vscode-foreground text-lg font-medium m-0">Task</h4>
           <div className="flex flex-col gap-2">
             <label className="text-vscode-descriptionForeground text-sm">Mode</label>
-            <Select value={selectedMode} onValueChange={setSelectedMode}>
+            <Select value={form.mode} onValueChange={v => setField("mode", v)}>
               <SelectTrigger className="w-full bg-vscode-dropdown-background !bg-vscode-dropdown-background hover:!bg-vscode-dropdown-background border border-vscode-dropdown-border">
                 <SelectValue placeholder="Select a mode" />
               </SelectTrigger>
@@ -139,8 +142,8 @@ const ScheduleForm: React.FC<ScheduleFormProps> = ({
               minHeight={100}
               maxHeight={300}
               placeholder="Enter task instructions..."
-              value={taskInstructions}
-              onChange={e => setTaskInstructions(e.target.value)}
+              value={form.taskInstructions}
+              onChange={e => setField("taskInstructions", e.target.value)}
             />
           </div>
         </div>
@@ -149,7 +152,7 @@ const ScheduleForm: React.FC<ScheduleFormProps> = ({
         <h4 className="text-vscode-foreground text-lg font-medium m-0">Schedule</h4>
         <div className="flex flex-col gap-2">
           <label className="text-vscode-descriptionForeground text-sm">Schedule Type</label>
-          <Select value={scheduleType} onValueChange={setScheduleType}>
+          <Select value={form.scheduleType} onValueChange={v => setField("scheduleType", v)}>
             <SelectTrigger className="w-full bg-vscode-dropdown-background !bg-vscode-dropdown-background hover:!bg-vscode-dropdown-background border border-vscode-dropdown-border">
               <SelectValue placeholder="Select a schedule type" />
             </SelectTrigger>
@@ -159,7 +162,7 @@ const ScheduleForm: React.FC<ScheduleFormProps> = ({
             </SelectContent>
           </Select>
         </div>
-        {scheduleType === "time" && (
+        {form.scheduleType === "time" && (
           <div className="flex flex-col gap-3 mt-2">
             <div className="flex items-center gap-2">
               <label className="text-vscode-descriptionForeground text-sm">Every</label>
@@ -167,15 +170,15 @@ const ScheduleForm: React.FC<ScheduleFormProps> = ({
                 type="number"
                 min="1"
                 className="w-16 h-7"
-                value={timeInterval}
+                value={form.timeInterval}
                 onChange={e => {
                   const value = parseInt(e.target.value);
-                  if (!isNaN(value) && value > 0) setTimeInterval(value.toString());
-                  else if (e.target.value === '') setTimeInterval('');
+                  if (!isNaN(value) && value > 0) setField("timeInterval", value.toString());
+                  else if (e.target.value === '') setField("timeInterval", '');
                 }}
                 aria-label="Time interval"
               />
-              <Select value={timeUnit} onValueChange={setTimeUnit}>
+              <Select value={form.timeUnit} onValueChange={v => setField("timeUnit", v)}>
                 <SelectTrigger className="w-32 bg-vscode-dropdown-background !bg-vscode-dropdown-background hover:!bg-vscode-dropdown-background border border-vscode-dropdown-border">
                   <SelectValue placeholder="Select unit" />
                 </SelectTrigger>
@@ -189,13 +192,13 @@ const ScheduleForm: React.FC<ScheduleFormProps> = ({
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2">
                 <label className="text-vscode-descriptionForeground text-sm">Days of the week</label>
-                {Object.values(selectedDays).filter(Boolean).length > 0 && (
+                {Object.values(form.selectedDays).filter(Boolean).length > 0 && (
                   <Badge variant="outline" className="bg-vscode-badge-background text-vscode-badge-foreground">
-                    {Object.values(selectedDays).filter(Boolean).length} {Object.values(selectedDays).filter(Boolean).length === 1 ? 'day' : 'days'} selected
+                    {Object.values(form.selectedDays).filter(Boolean).length} {Object.values(form.selectedDays).filter(Boolean).length === 1 ? 'day' : 'days'} selected
                   </Badge>
                 )}
               </div>
-              <DaySelector selectedDays={selectedDays} toggleDay={toggleDay} />
+              <DaySelector selectedDays={form.selectedDays} toggleDay={toggleDay} />
             </div>
             <div className="flex flex-col gap-2">
               <label className="text-vscode-descriptionForeground text-sm">Start Time</label>
@@ -203,15 +206,15 @@ const ScheduleForm: React.FC<ScheduleFormProps> = ({
                 <Input
                   type="date"
                   className="w-40"
-                  value={startDate}
-                  onChange={e => setStartDate(e.target.value)}
+                  value={form.startDate}
+                  onChange={e => setField("startDate", e.target.value)}
                   aria-label="Start date"
                 />
                 <TimeInput
-                  hour={startHour}
-                  minute={startMinute}
-                  setHour={setStartHour}
-                  setMinute={setStartMinute}
+                  hour={form.startHour}
+                  minute={form.startMinute}
+                  setHour={v => setField("startHour", v)}
+                  setMinute={v => setField("startMinute", v)}
                   hourAria="Start hour"
                   minuteAria="Start minute"
                 />
@@ -223,16 +226,16 @@ const ScheduleForm: React.FC<ScheduleFormProps> = ({
                 <Input
                   type="date"
                   className="w-40"
-                  value={expirationDate}
-                  min={startDate}
-                  onChange={e => setExpirationDate(e.target.value)}
+                  value={form.expirationDate}
+                  min={form.startDate}
+                  onChange={e => setField("expirationDate", e.target.value)}
                   aria-label="Expiration date"
                 />
                 <TimeInput
-                  hour={expirationHour}
-                  minute={expirationMinute}
-                  setHour={setExpirationHour}
-                  setMinute={setExpirationMinute}
+                  hour={form.expirationHour}
+                  minute={form.expirationMinute}
+                  setHour={v => setField("expirationHour", v)}
+                  setMinute={v => setField("expirationMinute", v)}
                   hourAria="Expiration hour"
                   minuteAria="Expiration minute"
                 />
@@ -246,14 +249,14 @@ const ScheduleForm: React.FC<ScheduleFormProps> = ({
             <div className="flex items-center gap-2 mt-2">
               <div
                 className="flex items-center cursor-pointer"
-                onClick={() => setRequireActivity(!requireActivity)}
+                onClick={() => setField("requireActivity", !form.requireActivity)}
               >
                 <div className={`w-4 h-4 border rounded-xs flex items-center justify-center mr-2 ${
-                  requireActivity
+                  form.requireActivity
                     ? "bg-vscode-button-background border-vscode-button-background"
                     : "border-vscode-input-border"
                 }`}>
-                  {requireActivity && (
+                  {form.requireActivity && (
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       width="10"

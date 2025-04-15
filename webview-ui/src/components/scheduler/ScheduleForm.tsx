@@ -6,6 +6,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { AutosizeTextarea } from "../../components/ui/autosize-textarea"
 import { ModeConfig } from "../../../../src/shared/modes"
 import { Schedule } from "./types"
+import LabeledInput from "./LabeledInput"
+import TimeInput from "./TimeInput"
+import DaySelector from "./DaySelector"
 
 export type ScheduleFormData = Omit<Schedule, 'id' | 'createdAt' | 'updatedAt' | 'modeDisplayName'>;
 
@@ -17,93 +20,11 @@ interface ScheduleFormProps {
   onCancel: () => void;
 }
 
-// --- Helper constants and components ---
-
-const DAYS = [
-  { label: 'S', day: 'sun' },
-  { label: 'M', day: 'mon' },
-  { label: 'T', day: 'tue' },
-  { label: 'W', day: 'wed' },
-  { label: 'Th', day: 'thu' },
-  { label: 'F', day: 'fri' },
-  { label: 'Sa', day: 'sat' }
-];
-
 const TIME_UNITS = [
   { value: "minute", label: "Minute(s)" },
   { value: "hour", label: "Hour(s)" },
   { value: "day", label: "Day(s)" }
 ];
-
-const LabeledInput = ({ label, ...props }: { label: string } & React.ComponentProps<typeof Input>) => (
-  <div className="flex flex-col gap-2">
-    <label className="text-vscode-descriptionForeground text-sm">{label}</label>
-    <Input {...props} />
-  </div>
-);
-
-const TimeInput = ({
-  hour, minute, setHour, setMinute, hourLabel = "HH", minuteLabel = "MM", hourAria, minuteAria
-}: {
-  hour: string, minute: string, setHour: (v: string) => void, setMinute: (v: string) => void,
-  hourLabel?: string, minuteLabel?: string, hourAria?: string, minuteAria?: string
-}) => (
-  <>
-    <Input
-      type="number"
-      min="0"
-      max="23"
-      className="w-16 h-7"
-      value={hour}
-      placeholder={hourLabel}
-      onChange={e => {
-        const v = parseInt(e.target.value)
-        if (!isNaN(v) && v >= 0 && v <= 23) setHour(v.toString().padStart(2, '0'))
-        else if (e.target.value === '') setHour('')
-      }}
-      aria-label={hourAria}
-    />
-    <span className="text-vscode-descriptionForeground">:</span>
-    <Input
-      type="number"
-      min="0"
-      max="59"
-      className="w-16 h-7"
-      value={minute}
-      placeholder={minuteLabel}
-      onChange={e => {
-        const v = parseInt(e.target.value)
-        if (!isNaN(v) && v >= 0 && v <= 59) setMinute(v.toString().padStart(2, '0'))
-        else if (e.target.value === '') setMinute('')
-      }}
-      aria-label={minuteAria}
-    />
-  </>
-);
-
-const DaySelector = ({
-  selectedDays, toggleDay
-}: {
-  selectedDays: Record<string, boolean>,
-  toggleDay: (day: string) => void
-}) => (
-  <div className="flex gap-2 flex-wrap">
-    {DAYS.map(({ label, day }) => (
-      <Button
-        key={day}
-        variant={selectedDays[day] ? "default" : "outline"}
-        className={`min-w-8 h-8 p-0 ${selectedDays[day] ? 'bg-vscode-button-background text-vscode-button-foreground' : 'bg-transparent text-vscode-foreground'}`}
-        onClick={() => toggleDay(day)}
-        aria-label={`Toggle ${day} selection`}
-        aria-pressed={selectedDays[day]}
-      >
-        {label}
-      </Button>
-    ))}
-  </div>
-);
-
-// --- Main component ---
 
 const ScheduleForm: React.FC<ScheduleFormProps> = ({
   initialData,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react"
+import React, { useState, useEffect, useCallback, forwardRef, useImperativeHandle } from "react"
 import { Button } from "../../components/ui/button"
 import { Input } from "../../components/ui/input"
 import { Badge } from "../../components/ui/badge"
@@ -25,6 +25,9 @@ interface ScheduleFormProps {
   onCancel: () => void;
 }
 
+export interface ScheduleFormHandle {
+  submitForm: () => void;
+}
 const TIME_UNITS = [
   { value: "minute", label: "Minute(s)" },
   { value: "hour", label: "Hour(s)" },
@@ -50,14 +53,17 @@ const getDefinedForm = (initialData?: Partial<ScheduleFormData>): RequiredSchedu
   requireActivity: initialData?.requireActivity ?? false
 });
 
-const ScheduleForm: React.FC<ScheduleFormProps> = ({
-  initialData,
-  isEditing,
-  availableModes,
-  onSave,
-  onCancel
-}) => {
+const ScheduleForm = forwardRef<ScheduleFormHandle, ScheduleFormProps>(
+  ({ initialData, isEditing, availableModes, onSave, onCancel }, ref) => {
   const [form, setForm] = useState<RequiredScheduleFormData>(getDefinedForm(initialData));
+
+  // Expose submitForm to parent via ref
+  useImperativeHandle(ref, () => ({
+    submitForm: () => {
+      handleSave();
+    }
+  }));
+
 
   useEffect(() => {
     if (!isEditing && !initialData?.startDate) {
@@ -290,7 +296,7 @@ const ScheduleForm: React.FC<ScheduleFormProps> = ({
         </Button>
       </div>
     </div>
-  )
-}
+  );
+});
 
-export default ScheduleForm
+export default ScheduleForm;

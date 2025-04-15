@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react"
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { Button } from "../../components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs"
 import {
@@ -24,6 +24,7 @@ import { useAppTranslation } from "../../i18n/TranslationContext"
 // Import new components
 import ScheduleList from "./ScheduleList"
 import ScheduleForm from "./ScheduleForm"
+import type { ScheduleFormHandle } from "./ScheduleForm"
 import { Schedule } from "./types"
 
 type SchedulerViewProps = {
@@ -50,7 +51,10 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 	const [initialFormData, setInitialFormData] = useState<Partial<Schedule>>({})
 	// Get all available modes (both default and custom)
 	const availableModes = useMemo(() => getAllModes(customModes), [customModes])
-	
+
+	// Ref for ScheduleForm
+	const scheduleFormRef = useRef<ScheduleFormHandle>(null);
+
 	// No need for default start time effect - handled in ScheduleForm
 	
 	// Load schedules from file
@@ -227,7 +231,28 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 		<Tab>
 			<TabHeader className="flex justify-between items-center">
 				<h3 className="text-vscode-foreground m-0">{'Scheduler' /* t("scheduler:title")*/}</h3>
-				<Button onClick={onDone}>{'Done' /*t("scheduler:done") */}</Button>
+				{activeTab === "edit" && isEditing ? (
+					<div className="flex gap-2">
+						<Button
+							variant="outline"
+							onClick={() => {
+								resetForm();
+								setActiveTab("schedules");
+							}}
+						>
+							Cancel
+						</Button>
+						<Button
+							onClick={() => {
+								scheduleFormRef.current?.submitForm();
+							}}
+						>
+							Save
+						</Button>
+					</div>
+				) : (
+					<Button onClick={onDone}>{'Done' /*t("scheduler:done") */}</Button>
+				)}
 			</TabHeader>
 			
 			<TabContent>
@@ -252,6 +277,7 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 					
 					<TabsContent value="edit">
 						<ScheduleForm
+							ref={scheduleFormRef}
 							initialData={initialFormData}
 							isEditing={isEditing}
 							availableModes={availableModes}

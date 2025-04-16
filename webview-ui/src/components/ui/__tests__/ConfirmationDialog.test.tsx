@@ -61,7 +61,7 @@ describe("ConfirmationDialog", () => {
     expect(onCancel).toHaveBeenCalled()
   })
 
-  it("disables buttons when loading or disabled", () => {
+  it("disables buttons when loading", () => {
     render(
       <ConfirmationDialog
         open={true}
@@ -74,7 +74,28 @@ describe("ConfirmationDialog", () => {
         loading={true}
       />
     )
-    expect(screen.getByText(confirmLabel)).toBeDisabled()
-    expect(screen.getByText(cancelLabel)).toBeDisabled()
+    // Confirm button should show "..." and be disabled
+    expect(screen.getByRole("button", { name: "..." })).toBeDisabled()
+    // Cancel button should be disabled
+    expect(screen.getByRole("button", { name: cancelLabel })).toBeDisabled()
+  })
+
+  it("disables buttons when disabled", () => {
+    render(
+      <ConfirmationDialog
+        open={true}
+        onOpenChange={() => {}}
+        title={title}
+        description={description}
+        confirmLabel={confirmLabel}
+        cancelLabel={cancelLabel}
+        onConfirm={() => {}}
+        disabled={true}
+      />
+    )
+    // Confirm button should show the label and be disabled
+    expect(screen.getByRole("button", { name: confirmLabel })).toBeDisabled()
+    // Cancel button should be disabled
+    expect(screen.getByRole("button", { name: cancelLabel })).toBeDisabled()
   })
 })

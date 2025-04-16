@@ -1,16 +1,6 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from "react"
+import React, { useState, useEffect, useMemo, useRef } from "react"
 import { Button } from "../../components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs"
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from "../../components/ui/alert-dialog"
 
 import { useExtensionState } from "../../context/ExtensionStateContext"
 import {
@@ -44,7 +34,6 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 	// Schedule list state
 	const [schedules, setSchedules] = useState<Schedule[]>([])
 	const [selectedScheduleId, setSelectedScheduleId] = useState<string | null>(null)
-	const [scheduleToDelete, setScheduleToDelete] = useState<string | null>(null)
 	
 	// Form editing state
 	const [isEditing, setIsEditing] = useState<boolean>(false)
@@ -271,7 +260,7 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 						<ScheduleList
 							schedules={schedules}
 							onEdit={editSchedule}
-							onDeleteRequest={setScheduleToDelete}
+							onDelete={deleteSchedule}
 						/>
 					</TabsContent>
 					
@@ -291,31 +280,6 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 				</Tabs>
 			</TabContent>
 
-			{/* Delete Confirmation Dialog */}
-			<AlertDialog open={scheduleToDelete !== null} onOpenChange={(open) => !open && setScheduleToDelete(null)}>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>Delete Schedule</AlertDialogTitle>
-						<AlertDialogDescription>
-							Are you sure you want to delete this schedule? This action cannot be undone.
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel>Cancel</AlertDialogCancel>
-						<AlertDialogAction
-							onClick={() => {
-								if (scheduleToDelete) {
-									deleteSchedule(scheduleToDelete);
-									setScheduleToDelete(null);
-								}
-							}}
-							className="bg-vscode-errorForeground hover:bg-vscode-errorForeground/90"
-						>
-							Delete
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
 		</Tab>
 	)
 }

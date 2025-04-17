@@ -60,6 +60,13 @@ export async function activate(context: vscode.ExtensionContext) {
 	if (!context.globalState.get("allowedCommands")) {
 		context.globalState.update("allowedCommands", defaultCommands)
 	}
+	
+	// Register command to open the roo-cline extension (always register)
+	context.subscriptions.push(
+		vscode.commands.registerCommand("roo-scheduler.openRooClineExtension", async () => {
+			await vscode.commands.executeCommand("workbench.view.extension.roo-cline-ActivityBar")
+		})
+	)
 
 	const provider = new ClineProvider(context, outputChannel, "sidebar")
 

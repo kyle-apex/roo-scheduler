@@ -300,6 +300,38 @@ class MockSchedulerService {
     const timestamp = new Date().toISOString();
     this.outputChannel.appendLine(`[${timestamp}] ${message}`);
   }
+
+  // Add toggleScheduleActive to the mock for testing
+  public async toggleScheduleActive(scheduleId: string, active: boolean): Promise<void> {
+    const scheduleIndex = this.schedules.findIndex((s: any) => s.id === scheduleId);
+    if (scheduleIndex === -1) {
+      this.log(`Schedule with ID ${scheduleId} not found.`);
+      return;
+    }
+    const schedule = this.schedules[scheduleIndex];
+    if (schedule.active === active) {
+      this.log(`Schedule "${schedule.name}" is already ${active ? 'active' : 'inactive'}.`);
+      return;
+    }
+    this.schedules[scheduleIndex] = { ...schedule, active };
+    await this.saveSchedules();
+    if (active) {
+      this.setupTimerForSchedule(this.schedules[scheduleIndex]);
+      this.log(`Activated schedule "${schedule.name}" and scheduled next task.`);
+    } else {
+      const timer = this.timers.get(scheduleId);
+      if (timer) {
+        clearTimeout(timer);
+        this.timers.delete(scheduleId);
+        this.log(`Deactivated schedule "${schedule.name}" and cleared timer.`);
+      }
+    }
+  }
+
+  // Add a method to reset the singleton instance for test isolation
+  public static resetInstance() {
+    MockSchedulerService.instance = undefined as any;
+  }
 }
 
 describe('SchedulerService', () => {

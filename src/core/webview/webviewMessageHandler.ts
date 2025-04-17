@@ -28,6 +28,33 @@ export const webviewMessageHandler = async (provider: any, message: WebviewMessa
 		await provider.contextProxy.setValue(key, value)
 
 	switch (message.type) {
+		case "schedulesUpdated": {
+			try {
+				const { SchedulerService } = await import("../../services/scheduler/SchedulerService");
+				const schedulerService = SchedulerService.getInstance(provider.contextProxy.extensionContext);
+				await schedulerService.reloadSchedulesAndReschedule();
+			} catch (error) {
+				console.log("Failed to reload schedules and reschedule in extension:", error);
+			}
+			break;
+		}
+		case "toggleScheduleActive": {
+			console.log('calling toggleSchedule active')
+			// Call backend SchedulerService.toggleScheduleActive
+			try {
+				const { SchedulerService } = await import("../../services/scheduler/SchedulerService");
+				const schedulerService = SchedulerService.getInstance(provider.contextProxy.extensionContext);
+				console.log('schedulerService', schedulerService)
+				if (typeof message.scheduleId === "string" && typeof message.active === "boolean") {
+					await schedulerService.toggleScheduleActive(message.scheduleId, message.active);
+				} else {
+					console.log("toggleScheduleActive: Missing or invalid scheduleId/active in message", message);
+				}
+			} catch (error) {
+				console.log("Failed to toggle schedule active state in extension:", error);
+			}
+			break;
+		}
 		case "webviewDidLaunch":
 			// Load custom modes first
 			const customModes = await provider.customModesManager.getCustomModes()
@@ -201,6 +228,7 @@ export const webviewMessageHandler = async (provider: any, message: WebviewMessa
 			break
 		case "openFile":
 			// Special handling for schedules.json file to ensure it's properly saved
+			console.log('here')
 			if (message.text === "./.roo/schedules.json" && message.values?.content) {
 				try {
 					// Get workspace root
@@ -218,7 +246,7 @@ export const webviewMessageHandler = async (provider: any, message: WebviewMessa
 					await vscode.workspace.fs.createDirectory(vscode.Uri.file(rooDir))
 					
 					// Write the file content
-					console.log(`Writing to schedules.json: ${message.values.content}`)
+					console.log(`Writing to schedules.jsonA: ${message.values.content}`)
 					await vscode.workspace.fs.writeFile(uri, Buffer.from(message.values.content, "utf8"))
 					
 					// Only open the file if explicitly requested (not for silent saves)

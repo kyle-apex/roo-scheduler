@@ -22,11 +22,13 @@ describe("ScheduleListItem", () => {
     const onEdit = jest.fn()
     const onDelete = jest.fn()
 
+    const onToggleActive = jest.fn()
     render(
       <ScheduleListItem
         schedule={mockSchedule}
         onEdit={onEdit}
         onDelete={onDelete}
+        onToggleActive={onToggleActive}
       />
     )
 
@@ -50,11 +52,13 @@ describe("ScheduleListItem", () => {
     const onEdit = jest.fn()
     const onDelete = jest.fn()
 
+    const onToggleActive = jest.fn()
     render(
       <ScheduleListItem
         schedule={mockSchedule}
         onEdit={onEdit}
         onDelete={onDelete}
+        onToggleActive={onToggleActive}
       />
     )
 
@@ -68,5 +72,35 @@ describe("ScheduleListItem", () => {
 
     // onDelete should not be called
     expect(onDelete).not.toHaveBeenCalled()
+  })
+
+  it("renders the active/inactive toggle button with fixed width in both states", () => {
+    const onEdit = jest.fn()
+    const onDelete = jest.fn()
+    const onToggleActive = jest.fn()
+
+    // Active state
+    render(
+      <ScheduleListItem
+        schedule={{ ...mockSchedule, active: true }}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        onToggleActive={onToggleActive}
+      />
+    )
+    let toggleButton = screen.getByRole("button", { name: /deactivate schedule/i })
+    expect(toggleButton).toHaveClass("w-20")
+
+    // Inactive state
+    render(
+      <ScheduleListItem
+        schedule={{ ...mockSchedule, active: false }}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        onToggleActive={onToggleActive}
+      />
+    )
+    toggleButton = screen.getByRole("button", { name: /activate schedule/i })
+    expect(toggleButton).toHaveClass("w-20")
   })
 })

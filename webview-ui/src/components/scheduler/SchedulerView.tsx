@@ -140,7 +140,12 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 		resetForm()
 		setActiveTab("schedules")
 	}
-	
+
+	// Notify backend to reload schedules and reschedule tasks
+	const notifySchedulesUpdated = () => {
+		vscode.postMessage({ type: "schedulesUpdated" });
+	};
+
 	// Edit schedule
 	const editSchedule = (scheduleId: string) => {
 		const schedule = schedules.find(s => s.id === scheduleId)
@@ -220,7 +225,7 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 		<Tab>
 			<TabHeader className="flex justify-between items-center">
 				<h3 className="text-vscode-foreground m-0">{'Scheduler' /* t("scheduler:title")*/}</h3>
-				{activeTab === "edit" && isEditing ? (
+				{activeTab === "edit" ? (
 					<div className="flex gap-2">
 						<Button
 							variant="outline"
@@ -240,7 +245,7 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 						</Button>
 					</div>
 				) : (
-					<Button onClick={onDone}>{'Done' /*t("scheduler:done") */}</Button>
+					<Button onClick={createNewSchedule}>Create New Schedule</Button>
 				)}
 			</TabHeader>
 			
@@ -261,6 +266,32 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 							schedules={schedules}
 							onEdit={editSchedule}
 							onDelete={deleteSchedule}
+							onToggleActive={(scheduleId, active) => {
+								// 1. Call backend to toggle schedule active state
+								vscode.postMessage({
+									type: "toggleScheduleActive",
+									scheduleId,
+									active,
+								});
+								// 2. Update local state and storage as before
+								const updatedSchedules = schedules.map(s =>
+									s.id === scheduleId ? { ...s, active } : s
+								);
+								try {
+									localStorage.setItem('roo-schedules', JSON.stringify(updatedSchedules));
+									console.log("Saved updated schedules to localStorage after toggle active");
+								} catch (e) {
+									console.error("Failed to save schedules to localStorage after toggle active:", e);
+								}
+								const fileContent = JSON.stringify({ schedules: updatedSchedules }, null, 2);
+								console.log("Saving updated schedules to file after toggle active:", fileContent);
+								vscode.postMessage({
+									type: "openFile",
+									text: "./.roo/schedules.json",
+									values: { create: true, content: fileContent }
+								});
+								setSchedules(updatedSchedules);
+							}}
 						/>
 					</TabsContent>
 					

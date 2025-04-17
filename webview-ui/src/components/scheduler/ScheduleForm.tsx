@@ -50,7 +50,8 @@ const getDefinedForm = (initialData?: Partial<ScheduleFormData>): RequiredSchedu
   expirationDate: initialData?.expirationDate ?? "",
   expirationHour: initialData?.expirationHour ?? "00",
   expirationMinute: initialData?.expirationMinute ?? "00",
-  requireActivity: initialData?.requireActivity ?? false
+  requireActivity: initialData?.requireActivity ?? false,
+  active: initialData?.active ?? true
 });
 
 const ScheduleForm = forwardRef<ScheduleFormHandle, ScheduleFormProps>(

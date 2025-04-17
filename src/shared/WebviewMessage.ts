@@ -11,6 +11,8 @@ export interface WebviewMessage {
 	type:
 		| "apiConfiguration"
 		| "deleteMultipleTasksWithIds"
+		| "toggleScheduleActive"
+		| "schedulesUpdated"
 		| "currentApiConfigName"
 		| "saveApiConfiguration"
 		| "upsertApiConfiguration"
@@ -144,6 +146,8 @@ export interface WebviewMessage {
 	source?: "global" | "project"
 	requestId?: string
 	ids?: string[]
+	scheduleId?: string
+	active?: boolean
 }
 
 export const checkoutDiffPayloadSchema = z.object({

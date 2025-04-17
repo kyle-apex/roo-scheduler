@@ -7,9 +7,10 @@ interface ScheduleListProps {
   schedules: Schedule[]
   onEdit: (scheduleId: string) => void
   onDelete: (scheduleId: string) => void
+  onToggleActive: (scheduleId: string, active: boolean) => void
 }
 
-const ScheduleList: React.FC<ScheduleListProps> = ({ schedules, onEdit, onDelete }) => {
+const ScheduleList: React.FC<ScheduleListProps> = ({ schedules, onEdit, onDelete, onToggleActive }) => {
   if (schedules.length === 0) {
     return (
       <div className="text-center py-8 text-vscode-descriptionForeground">
@@ -27,6 +28,7 @@ const ScheduleList: React.FC<ScheduleListProps> = ({ schedules, onEdit, onDelete
             schedule={schedule}
             onEdit={onEdit}
             onDelete={onDelete}
+            onToggleActive={onToggleActive}
           />
         ))}
       </div>

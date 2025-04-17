@@ -15,6 +15,7 @@ export interface Schedule {
   expirationHour?: string;
   expirationMinute?: string;
   requireActivity?: boolean;
+  active?: boolean; // If undefined, treat as true (backward compatibility)
   createdAt: string;
   updatedAt: string;
 }

@@ -9,16 +9,49 @@ interface ScheduleListItemProps {
   schedule: Schedule;
   onEdit: (scheduleId: string) => void;
   onDelete: (scheduleId: string) => void;
+  onToggleActive: (scheduleId: string, active: boolean) => void;
 }
 
-const ScheduleListItem: React.FC<ScheduleListItemProps> = ({ schedule, onEdit, onDelete }) => {
+const ScheduleListItem: React.FC<ScheduleListItemProps> = ({ schedule, onEdit, onDelete, onToggleActive }) => {
   const [dialogOpen, setDialogOpen] = useState(false)
 
   return (
     <>
       <Card key={schedule.id} className="border border-vscode-input-border">
         <CardHeader className="pb-2 relative">
-          <div className="absolute top-3 right-3">
+          <div className="absolute top-3 right-3 flex gap-2">
+            {/* Active/Inactive Toggle Button */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`h-8 w-20 px-2 py-0 text-xs font-semibold rounded ${
+                      schedule.active === false
+                        ? "bg-vscode-input-background text-vscode-descriptionForeground border border-vscode-input-border"
+                        : "bg-green-600 text-white"
+                    }`}
+                    onClick={() => {
+                      // Treat undefined as true (so toggle to false)
+                      const isActive = schedule.active !== false;
+                      onToggleActive(schedule.id, !isActive);
+                    }}
+                    aria-label={schedule.active === false ? "Activate schedule" : "Deactivate schedule"}
+                  >
+                    {schedule.active === false ? "Inactive" : "Active"}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>
+                    {schedule.active === false
+                      ? "This schedule is inactive and will not run. Click to activate."
+                      : "This schedule is active. Click to deactivate."}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            {/* Delete Button */}
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -88,11 +121,7 @@ const ScheduleListItem: React.FC<ScheduleListItemProps> = ({ schedule, onEdit, o
         description="Are you sure you want to delete this schedule? This action cannot be undone."
         confirmLabel="Delete"
         cancelLabel="Cancel"
-        onConfirm={() => {
-          onDelete(schedule.id)
-          setDialogOpen(false)
-        }}
-        onCancel={() => setDialogOpen(false)}
+        onConfirm={() => onDelete(schedule.id)}
         confirmClassName="bg-vscode-errorForeground hover:bg-vscode-errorForeground/90"
       />
     </>

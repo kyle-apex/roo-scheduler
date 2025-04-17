@@ -14,15 +14,12 @@ interface ConfirmationDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   title: React.ReactNode
-  description: React.ReactNode
+  description?: React.ReactNode
   confirmLabel?: React.ReactNode
   cancelLabel?: React.ReactNode
   onConfirm: () => void
-  onCancel?: () => void
   confirmClassName?: string
-  cancelClassName?: string
-  loading?: boolean
-  disabled?: boolean
+  children?: React.ReactNode
 }
 
 const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
@@ -33,38 +30,32 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
   confirmLabel = "Confirm",
   cancelLabel = "Cancel",
   onConfirm,
-  onCancel,
-  confirmClassName = "",
-  cancelClassName = "",
-  loading = false,
-  disabled = false,
-}) => {
-  return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{title}</AlertDialogTitle>
+  confirmClassName,
+  children,
+}) => (
+  <AlertDialog open={open} onOpenChange={onOpenChange}>
+    <AlertDialogContent>
+      <AlertDialogHeader>
+        <AlertDialogTitle>{title}</AlertDialogTitle>
+        {description && (
           <AlertDialogDescription>{description}</AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel
-            className={cancelClassName}
-            onClick={onCancel}
-            disabled={loading || disabled}
-          >
-            {cancelLabel}
-          </AlertDialogCancel>
-          <AlertDialogAction
-            onClick={onConfirm}
-            className={confirmClassName}
-            disabled={loading || disabled}
-          >
-            {loading ? "..." : confirmLabel}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  )
-}
+        )}
+      </AlertDialogHeader>
+      {children}
+      <AlertDialogFooter>
+        <AlertDialogCancel>{cancelLabel}</AlertDialogCancel>
+        <AlertDialogAction
+          onClick={() => {
+            onConfirm()
+            onOpenChange(false)
+          }}
+          className={confirmClassName}
+        >
+          {confirmLabel}
+        </AlertDialogAction>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
+)
 
 export default ConfirmationDialog

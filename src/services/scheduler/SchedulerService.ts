@@ -23,6 +23,7 @@ interface Schedule {
   expirationHour?: string;
   expirationMinute?: string;
   requireActivity?: boolean;
+  active?: boolean; // If undefined, treat as true (backward compatibility)
   createdAt: string;
   updatedAt: string;
   lastExecutionTime?: string;
@@ -57,6 +58,42 @@ export class SchedulerService {
     }
     return SchedulerService.instance;
   }
+  /**
+   * Toggle a schedule's active state and ensure next task is scheduled if activated.
+   * @param scheduleId The ID of the schedule to toggle
+   * @param active Whether to set the schedule as active or inactive
+   */
+  public async toggleScheduleActive(scheduleId: string, active: boolean): Promise<void> {
+    console.log('here', scheduleId, active)
+    const scheduleIndex = this.schedules.findIndex(s => s.id === scheduleId);
+    if (scheduleIndex === -1) {
+      this.log(`Schedule with ID ${scheduleId} not found.`);
+      return;
+    }
+    const schedule = this.schedules[scheduleIndex];
+    // Only update if the state is actually changing
+    if (schedule.active === active) {
+      this.log(`Schedule "${schedule.name}" is already ${active ? 'active' : 'inactive'}.`);
+      return;
+    }
+    this.schedules[scheduleIndex] = { ...schedule, active };
+    await this.saveSchedules();
+    // If activating, set up the timer for this schedule
+    if (active) {
+      this.setupTimerForSchedule(this.schedules[scheduleIndex]);
+      this.log(`Activated schedule "${schedule.name}" and scheduled next task.`);
+    } else {
+      // If deactivating, clear any existing timer
+      const timer = this.timers.get(scheduleId);
+      if (timer) {
+        clearTimeout(timer);
+        this.timers.delete(scheduleId);
+        this.log(`Deactivated schedule "${schedule.name}" and cleared timer.`);
+      }
+    }
+  }
+
+
 
   private updateLastActivityTime(): void {
     this.lastActivityTime = Date.now();
@@ -106,13 +143,22 @@ export class SchedulerService {
 
     // Set up new timers for each schedule
     for (const schedule of this.schedules) {
+      if (schedule.active === false) {
+        this.log(`Skipping timer setup for inactive schedule "${schedule.name}"`);
+        continue;
+      }
       this.setupTimerForSchedule(schedule);
     }
   }
 
   private setupTimerForSchedule(schedule: Schedule): void {
+    if (schedule.active === false) {
+      this.log(`Not setting up timer for inactive schedule "${schedule.name}"`);
+      return;
+    }
     if (schedule.scheduleType === 'time') {
       const nextExecutionTime = this.calculateNextExecutionTime(schedule);
+      console.log('nextExecutionTime', nextExecutionTime)
       if (!nextExecutionTime) {
         this.log(`Schedule "${schedule.name}" has no valid execution time or has expired`);
         return;
@@ -133,7 +179,7 @@ export class SchedulerService {
       this.timers.set(schedule.id, timer);
     }
   }
-
+    
   private calculateNextExecutionTime(schedule: Schedule): Date | null {
     if (!schedule.timeInterval || !schedule.timeUnit || !schedule.startDate) {
       return null;
@@ -143,7 +189,6 @@ export class SchedulerService {
     const startDateTime = new Date(
       `${schedule.startDate}T${schedule.startHour || '00'}:${schedule.startMinute || '00'}:00`
     );
-
     // Check if schedule has expired
     if (schedule.expirationDate) {
       const expirationDateTime = new Date(
@@ -237,9 +282,14 @@ export class SchedulerService {
 
     return nextTime;
   }
+private async executeSchedule(schedule: Schedule): Promise<void> {
+  console.log('execute schedule', schedule)
+  if (schedule.active === false) {
+    this.log(`Skipping execution of inactive schedule "${schedule.name}"`);
+    return;
+  }
+  this.log(`Executing schedule "${schedule.name}"`);
 
-  private async executeSchedule(schedule: Schedule): Promise<void> {
-    this.log(`Executing schedule "${schedule.name}"`);
 
     // Check if we should respect activity requirement
     if (schedule.requireActivity) {
@@ -271,6 +321,7 @@ export class SchedulerService {
   }
 
   private async processTask(mode: string, taskInstructions: string): Promise<void> {
+    console.log('in process task', mode, taskInstructions);
     try {
       // Validate the mode
       const modeConfig = getModeBySlug(mode);
@@ -317,5 +368,15 @@ export class SchedulerService {
   private log(message: string): void {
     const timestamp = new Date().toISOString();
     this.outputChannel.appendLine(`[${timestamp}] ${message}`);
+  }
+
+  /**
+   * Reload schedules from disk and reschedule all timers.
+   * Call this after the schedule file is updated externally.
+   */
+  public async reloadSchedulesAndReschedule(): Promise<void> {
+    this.log("Reloading schedules and rescheduling timers due to external update");
+    await this.loadSchedules();
+    this.setupTimers();
   }
 }

@@ -334,6 +334,18 @@ class MockSchedulerService {
   }
 }
 
+  describe('initialize', () => {
+    it('should call setupTimers when initialize is called', async () => {
+      const schedulerService = MockSchedulerService.getInstance(mockContext);
+      const setupTimersSpy = jest.spyOn(schedulerService, 'setupTimers' as any);
+      // Mock loadSchedules to resolve immediately
+      (schedulerService as any).loadSchedules = jest.fn().mockResolvedValue(undefined);
+      await schedulerService.initialize();
+      expect(setupTimersSpy).toHaveBeenCalled();
+      setupTimersSpy.mockRestore();
+    });
+  });
+
 describe('SchedulerService', () => {
   // Mock data
   const mockSchedulesFilePath = '/mock/path/.roo/schedules.json';

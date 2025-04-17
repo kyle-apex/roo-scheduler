@@ -137,6 +137,7 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 		
 		// Update state
 		setSchedules(updatedSchedules)
+		notifySchedulesUpdated(); // Notify backend to reload schedules and reschedule timers
 		resetForm()
 		setActiveTab("schedules")
 	}
@@ -251,13 +252,8 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 			
 			<TabContent>
 				<Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-					{/* Tab headers removed as per user request */}
-
-
-
 
 					<TabsContent value="schedules" className="space-y-4">
-						
 						
 						<ScheduleList
 							schedules={schedules}

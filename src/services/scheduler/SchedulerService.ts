@@ -100,7 +100,7 @@ export class SchedulerService {
   }
 
   public async initialize(): Promise<void> {
-    this.log('Initializing scheduler service');
+    console.log('Initializing scheduler service');
     await this.loadSchedules();
     this.setupTimers();
   }
@@ -135,6 +135,7 @@ export class SchedulerService {
   }
 
   private setupTimers(): void {
+    console.log('setup timers');
     // Clear existing timers
     for (const timer of this.timers.values()) {
       clearTimeout(timer);

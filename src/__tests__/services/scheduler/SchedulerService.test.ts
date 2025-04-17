@@ -1,11 +1,12 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { RooCodeAPI } from '../../../roo-code';
 import { getModeBySlug } from '../../../shared/modes';
+import { RooService } from '../../../services/scheduler/RooService';
 import { getWorkspacePath } from '../../../utils/path';
 import { fileExistsAtPath } from '../../../utils/fs';
 
+import { jest } from '@jest/globals';
 // Mock dependencies
 jest.mock('fs/promises');
 jest.mock('path');
@@ -13,6 +14,7 @@ jest.mock('../../../utils/path');
 jest.mock('../../../utils/fs');
 jest.mock('../../../shared/modes');
 jest.mock('vscode');
+jest.mock('../../../services/scheduler/RooService');
 
 // Create a mock implementation of the SchedulerService for testing
 class MockSchedulerService {
@@ -260,34 +262,7 @@ class MockSchedulerService {
         throw new Error(`Invalid mode: ${mode}`);
       }
 
-      // Get the Roo Cline extension
-      const extension = vscode.extensions.getExtension<RooCodeAPI>("rooveterinaryinc.roo-cline");
-      
-      if (!extension?.isActive) {
-        throw new Error("Roo Cline extension is not activated");
-      }
-      
-      const api = extension.exports;
-      
-      if (!api) {
-        throw new Error("Roo Cline API is not available");
-      }
-      
       // Get the current configuration
-      const config = api.getConfiguration();
-      
-      // Set the mode in the configuration
-      const updatedConfig = {
-        ...config,
-        mode,
-        customModePrompts: config.customModePrompts || {}
-      };
-      
-      // Start a new task with the specified mode and instructions
-      await api.startNewTask({
-        configuration: updatedConfig,
-        text: taskInstructions
-      });
 
       this.log(`Successfully started task with mode "${mode}"`);
     } catch (error) {
@@ -426,14 +401,14 @@ describe('SchedulerService', () => {
   };
 
   // Mock implementations
-  let mockRooCodeAPI: any;
-  let mockExtension: any;
   let mockDate: Date;
   let originalDateNow: () => number;
-  let mockSetTimeout: jest.SpyInstance;
-  let mockClearTimeout: jest.SpyInstance;
+  let mockSetTimeout: any;
+  let mockClearTimeout: any;
   let schedulerService: MockSchedulerService;
   let mockContext: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let mockStartTaskWithMode: any;
 
   beforeEach(() => {
     // Reset all mocks
@@ -456,26 +431,7 @@ describe('SchedulerService', () => {
     });
     mockClearTimeout = jest.spyOn(global, 'clearTimeout').mockImplementation(() => {});
     
-    // Mock RooCodeAPI
-    mockRooCodeAPI = {
-      getConfiguration: jest.fn().mockReturnValue({
-        customModePrompts: {},
-        diffEnabled: true,
-        enableCheckpoints: true,
-        checkpointStorage: 'task',
-        fuzzyMatchThreshold: 1.0,
-        experiments: {}
-      }),
-      startNewTask: jest.fn().mockResolvedValue('mock-task-id'),
-    };
-    
-    // Mock VSCode extension
-    mockExtension = {
-      isActive: true,
-      exports: mockRooCodeAPI
-    };
-    
-    (vscode.extensions.getExtension as jest.Mock).mockReturnValue(mockExtension);
+    // (RooCodeAPI and extension mocks removed)
     
     // Mock getModeBySlug
     (getModeBySlug as jest.Mock).mockReturnValue({ slug: 'code', name: 'Code' });
@@ -503,7 +459,7 @@ describe('SchedulerService', () => {
       const schedulerService = MockSchedulerService.getInstance(mockContext);
       const setupTimersSpy = jest.spyOn(schedulerService, 'setupTimers' as any);
       // Mock loadSchedules to resolve immediately
-      (schedulerService as any).loadSchedules = jest.fn().mockResolvedValue(undefined);
+      (schedulerService as any).loadSchedules = (jest.fn() as any).mockResolvedValue(undefined);
       await schedulerService.initialize();
       expect(setupTimersSpy).toHaveBeenCalled();
       setupTimersSpy.mockRestore();
@@ -514,53 +470,35 @@ describe('SchedulerService', () => {
   beforeEach(() => {
     // Reset all mocks
     jest.resetAllMocks();
-    
+
     // Mock path.join
     (path.join as jest.Mock).mockImplementation((...args) => args.join('/').replace(/\/+/g, '/'));
-    
+
     // Mock getWorkspacePath
     (getWorkspacePath as jest.Mock).mockReturnValue(mockWorkspacePath);
-    
+
     // Mock Date.now
     originalDateNow = Date.now;
     mockDate = new Date('2025-04-11T10:00:00Z');
     Date.now = jest.fn(() => mockDate.getTime());
-    
+
     // Mock setTimeout and clearTimeout
     mockSetTimeout = jest.spyOn(global, 'setTimeout').mockImplementation((callback, delay) => {
       return { id: 'mockTimeout' } as unknown as NodeJS.Timeout;
     });
     mockClearTimeout = jest.spyOn(global, 'clearTimeout').mockImplementation(() => {});
-    
-    // Mock RooCodeAPI
-    mockRooCodeAPI = {
-      getConfiguration: jest.fn().mockReturnValue({
-        customModePrompts: {},
-        diffEnabled: true,
-        enableCheckpoints: true,
-        checkpointStorage: 'task',
-        fuzzyMatchThreshold: 1.0,
-        experiments: {}
-      }),
-      startNewTask: jest.fn().mockResolvedValue('mock-task-id'),
-    };
-    
-    // Mock VSCode extension
-    mockExtension = {
-      isActive: true,
-      exports: mockRooCodeAPI
-    };
-    
-    (vscode.extensions.getExtension as jest.Mock).mockReturnValue(mockExtension);
-    
+
     // Mock getModeBySlug
     (getModeBySlug as jest.Mock).mockReturnValue({ slug: 'code', name: 'Code' });
-    
+
+    // Mock RooService
+    mockStartTaskWithMode = jest.spyOn(RooService, 'startTaskWithMode').mockResolvedValue(undefined);
+
     // Mock context
     mockContext = {
       subscriptions: [],
     };
-    
+
     // Initialize the scheduler service
     schedulerService = MockSchedulerService.getInstance(mockContext);
   });
@@ -577,10 +515,10 @@ describe('SchedulerService', () => {
   describe('loadSchedules', () => {
     it('should load schedules from file', async () => {
       // Mock fileExistsAtPath to return true
-      (fileExistsAtPath as jest.Mock).mockResolvedValue(true);
+      (fileExistsAtPath as any).mockResolvedValue(true);
       
       // Mock fs.readFile to return sample schedules
-      (fs.readFile as jest.Mock).mockResolvedValue(JSON.stringify(sampleSchedules));
+      (fs.readFile as any).mockResolvedValue(JSON.stringify(sampleSchedules));
       
       await (schedulerService as any).loadSchedules();
       
@@ -596,7 +534,7 @@ describe('SchedulerService', () => {
 
     it('should handle case when schedules file does not exist', async () => {
       // Mock fileExistsAtPath to return false
-      (fileExistsAtPath as jest.Mock).mockResolvedValue(false);
+      (fileExistsAtPath as any).mockResolvedValue(false);
       
       await (schedulerService as any).loadSchedules();
       
@@ -818,43 +756,34 @@ describe('SchedulerService', () => {
   describe('executeSchedule', () => {
     it('should execute a schedule and update last execution time', async () => {
       // Mock fs.writeFile
-      (fs.writeFile as jest.Mock).mockResolvedValue(undefined);
-      
+      (fs.writeFile as any).mockResolvedValue(undefined);
+
       // Set up the schedules array with our test data
       (schedulerService as any).schedules = [...sampleSchedules.schedules];
-      
+
       // Execute the daily schedule
       const dailySchedule = sampleSchedules.schedules[0];
       await schedulerService.executeSchedule(dailySchedule);
-      
-      // Verify that vscode.extensions.getExtension was called
-      expect(vscode.extensions.getExtension).toHaveBeenCalledWith("rooveterinaryinc.roo-cline");
-      
-      // Verify that getConfiguration was called
-      expect(mockRooCodeAPI.getConfiguration).toHaveBeenCalled();
-      
-      // Verify that startNewTask was called with correct parameters
-      expect(mockRooCodeAPI.startNewTask).toHaveBeenCalledWith({
-        configuration: expect.objectContaining({
-          mode: dailySchedule.mode,
-          customModePrompts: expect.any(Object)
-        }),
-        text: dailySchedule.taskInstructions
-      });
-      
+
+      // Verify that RooService.startTaskWithMode was called with correct parameters
+      expect(mockStartTaskWithMode).toHaveBeenCalledWith(
+        dailySchedule.mode,
+        dailySchedule.taskInstructions
+      );
+
       // Verify that the schedule was updated with lastExecutionTime
       const updatedSchedules = (schedulerService as any).schedules;
       const updatedSchedule = updatedSchedules.find((s: any) => s.id === dailySchedule.id);
       expect(updatedSchedule).toBeDefined();
       expect(updatedSchedule.lastExecutionTime).toBeDefined();
-      
+
       // Verify that fs.writeFile was called to save the schedules
       expect(fs.writeFile).toHaveBeenCalledWith(
         expect.stringContaining('schedules.json'),
         expect.any(String),
         'utf-8'
       );
-      
+
       // Verify that a new timer was set up for the next execution
       expect(setTimeout).toHaveBeenCalled();
     });
@@ -865,97 +794,63 @@ describe('SchedulerService', () => {
         ...sampleSchedules.schedules[4],
         lastExecutionTime: '2025-04-11T10:30:00Z' // After current time (10:00 AM)
       };
-      
+
       // Set last activity time to be before last execution
       (schedulerService as any).lastActivityTime = new Date('2025-04-11T09:30:00Z').getTime();
-      
+
       await schedulerService.executeSchedule(activitySchedule);
-      
-      // Verify that vscode.extensions.getExtension was not called
-      expect(vscode.extensions.getExtension).not.toHaveBeenCalled();
-      
-      // Verify that startNewTask was not called
-      expect(mockRooCodeAPI.startNewTask).not.toHaveBeenCalled();
-      
+
+      // Verify that RooService.startTaskWithMode was not called
+      expect(mockStartTaskWithMode).not.toHaveBeenCalled();
+
       // Verify that fs.writeFile was not called
       expect(fs.writeFile).not.toHaveBeenCalled();
-      
+
       // Verify that a new timer was set up for the next execution
       expect(setTimeout).toHaveBeenCalled();
     });
   });
-describe('processTask', () => {
-  it('should validate mode when processing a task', async () => {
-    // Mock getModeBySlug to return null for invalid mode
-    (getModeBySlug as jest.Mock).mockReturnValue(null);
-    
-    // Expect processTask to throw error for invalid mode
-    await expect(schedulerService.processTask('invalid-mode', 'Test task instructions')).rejects.toThrow('Invalid mode');
-  });
 
-  it('should throw error if extension is not active', async () => {
-    // Mock getModeBySlug to return a valid mode
-    (getModeBySlug as jest.Mock).mockReturnValue({ slug: 'code', name: 'Code' });
-    
-    // Mock extension to be inactive
-    mockExtension.isActive = false;
-    
-    // Expect processTask to throw error for inactive extension
-    await expect(schedulerService.processTask('code', 'Test task instructions')).rejects.toThrow('Roo Cline extension is not activated');
-    
-    // Reset extension active state
-    mockExtension.isActive = true;
-  });
+  describe('processTask', () => {
+    it('should validate mode when processing a task', async () => {
+      // Mock getModeBySlug to return null for invalid mode
+      (getModeBySlug as jest.Mock).mockReturnValue(null);
 
-  it('should throw error if API is not available', async () => {
-    // Mock getModeBySlug to return a valid mode
-    (getModeBySlug as jest.Mock).mockReturnValue({ slug: 'code', name: 'Code' });
-    
-    // Save original exports
-    const originalExports = mockExtension.exports;
-    
-    // Mock extension exports to be null
-    mockExtension.exports = null;
-    
-    // Expect processTask to throw error for unavailable API
-    await expect(schedulerService.processTask('code', 'Test task instructions')).rejects.toThrow('Roo Cline API is not available');
-    
-    // Restore original exports
-    mockExtension.exports = originalExports;
-  });
-
-  it('should call startNewTask with correct parameters', async () => {
-    // Mock getModeBySlug to return a valid mode
-    (getModeBySlug as jest.Mock).mockReturnValue({ slug: 'code', name: 'Code' });
-    
-    // Set up a custom configuration
-    const mockConfig = {
-      diffEnabled: true,
-      enableCheckpoints: true,
-      checkpointStorage: 'task',
-      fuzzyMatchThreshold: 1.0,
-      experiments: {},
-      customModePrompts: {
-        code: {
-          customInstructions: 'Custom instructions for code mode'
-        }
-      }
-    };
-    
-    // Update the mock API to return our custom configuration
-    mockRooCodeAPI.getConfiguration.mockReturnValue(mockConfig);
-    
-    // Call processTask
-    await schedulerService.processTask('code', 'Test task instructions');
-    
-    // Verify that startNewTask was called with correct parameters
-    expect(mockRooCodeAPI.startNewTask).toHaveBeenCalledWith({
-      configuration: {
-        ...mockConfig,
-        mode: 'code'
-      },
-      text: 'Test task instructions'
+      // Expect processTask to throw error for invalid mode
+      await expect(schedulerService.processTask('invalid-mode', 'Test task instructions')).rejects.toThrow('Invalid mode');
     });
-  });
+
+    it('should throw error if RooService throws (extension not active)', async () => {
+      // Mock getModeBySlug to return a valid mode
+      (getModeBySlug as jest.Mock).mockReturnValue({ slug: 'code', name: 'Code' });
+
+      // Mock RooService to throw
+      mockStartTaskWithMode.mockRejectedValueOnce(new Error('Roo Cline extension is not activated'));
+
+      // Expect processTask to throw error for inactive extension
+      await expect(schedulerService.processTask('code', 'Test task instructions')).rejects.toThrow('Roo Cline extension is not activated');
+    });
+
+    it('should throw error if RooService throws (API not available)', async () => {
+      // Mock getModeBySlug to return a valid mode
+      (getModeBySlug as jest.Mock).mockReturnValue({ slug: 'code', name: 'Code' });
+
+      // Mock RooService to throw
+      mockStartTaskWithMode.mockRejectedValueOnce(new Error('Roo Cline API is not available'));
+
+      // Expect processTask to throw error for unavailable API
+      await expect(schedulerService.processTask('code', 'Test task instructions')).rejects.toThrow('Roo Cline API is not available');
+    });
+
+    it('should call RooService.startTaskWithMode with correct parameters', async () => {
+      // Mock getModeBySlug to return a valid mode
+      (getModeBySlug as jest.Mock).mockReturnValue({ slug: 'code', name: 'Code' });
+
+      // Call processTask
+      await schedulerService.processTask('code', 'Test task instructions');
+
+      // Verify that RooService.startTaskWithMode was called with correct parameters
+      expect(mockStartTaskWithMode).toHaveBeenCalledWith('code', 'Test task instructions');
+    });
   });
 });

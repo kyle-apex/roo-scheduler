@@ -1,10 +1,10 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { RooCodeAPI } from '../../roo-code';
 import { getModeBySlug } from '../../shared/modes';
 import { getWorkspacePath } from '../../utils/path';
 import { fileExistsAtPath } from '../../utils/fs';
+import { RooService } from './RooService';
 
 interface Schedule {
   id: string;
@@ -340,34 +340,8 @@ private async executeSchedule(schedule: Schedule): Promise<void> {
         throw new Error(`Invalid mode: ${mode}`);
       }
 
-      // Get the Roo Cline extension
-      const extension = vscode.extensions.getExtension<RooCodeAPI>("rooveterinaryinc.roo-cline");
-      
-      if (!extension?.isActive) {
-        throw new Error("Roo Cline extension is not activated");
-      }
-      
-      const api = extension.exports;
-      
-      if (!api) {
-        throw new Error("Roo Cline API is not available");
-      }
-      
-      // Get the current configuration
-      const config = api.getConfiguration();
-      
-      // Set the mode in the configuration
-      const updatedConfig = {
-        ...config,
-        mode,
-        customModePrompts: config.customModePrompts || {}
-      };
-      
-      // Start a new task with the specified mode and instructions
-      await api.startNewTask({
-        configuration: updatedConfig,
-        text: taskInstructions
-      });
+      // Delegate to RooService for Roo Cline extension interaction
+      await RooService.startTaskWithMode(mode, taskInstructions);
 
       this.log(`Successfully started task with mode "${mode}"`);
     } catch (error) {

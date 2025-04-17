@@ -251,16 +251,13 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 			
 			<TabContent>
 				<Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-					<TabsList className="grid grid-cols-2 mb-4">
-						<TabsTrigger value="schedules">Schedules</TabsTrigger>
-						<TabsTrigger value="edit">Add/Edit Schedule</TabsTrigger>
-					</TabsList>
-					
+					{/* Tab headers removed as per user request */}
+
+
+
+
 					<TabsContent value="schedules" className="space-y-4">
-						<div className="flex justify-between items-center mb-4">
-							<h4 className="text-vscode-foreground text-lg font-medium m-0">Saved Schedules</h4>
-							<Button onClick={createNewSchedule}>Create New Schedule</Button>
-						</div>
+						
 						
 						<ScheduleList
 							schedules={schedules}

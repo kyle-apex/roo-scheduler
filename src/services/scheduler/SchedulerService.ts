@@ -76,11 +76,10 @@ export class SchedulerService {
       this.log(`Schedule "${schedule.name}" is already ${active ? 'active' : 'inactive'}.`);
       return;
     }
-    this.schedules[scheduleIndex] = { ...schedule, active };
-    await this.saveSchedules();
+    const updatedSchedule = await this.updateSchedule(scheduleId, { active });
     // If activating, set up the timer for this schedule
-    if (active) {
-      this.setupTimerForSchedule(this.schedules[scheduleIndex]);
+    if (active && updatedSchedule) {
+      this.setupTimerForSchedule(updatedSchedule);
       this.log(`Activated schedule "${schedule.name}" and scheduled next task.`);
     } else {
       // If deactivating, clear any existing timer
@@ -93,7 +92,18 @@ export class SchedulerService {
     }
   }
 
-
+  /**
+   * Update a schedule by id with the given updates and persist the change.
+   * Returns the updated schedule, or undefined if not found.
+   */
+  private async updateSchedule(scheduleId: string, updates: Partial<Schedule>): Promise<Schedule | undefined> {
+    const scheduleIndex = this.schedules.findIndex(s => s.id === scheduleId);
+    if (scheduleIndex === -1) return undefined;
+    const updatedSchedule = { ...this.schedules[scheduleIndex], ...updates };
+    this.schedules[scheduleIndex] = updatedSchedule;
+    await this.saveSchedules();
+    return updatedSchedule;
+  }
 
   private updateLastActivityTime(): void {
     this.lastActivityTime = Date.now();
@@ -308,12 +318,12 @@ private async executeSchedule(schedule: Schedule): Promise<void> {
       await this.processTask(schedule.mode, schedule.taskInstructions);
       
       // Update last execution time
-      const updatedSchedule = { ...schedule, lastExecutionTime: new Date().toISOString() };
-      this.schedules = this.schedules.map(s => s.id === schedule.id ? updatedSchedule : s);
-      await this.saveSchedules();
+      const updatedSchedule = await this.updateSchedule(schedule.id, { lastExecutionTime: new Date().toISOString() });
       
       // Set up the next timer
-      this.setupTimerForSchedule(updatedSchedule);
+      if (updatedSchedule) {
+        this.setupTimerForSchedule(updatedSchedule);
+      }
     } catch (error) {
       this.log(`Error executing schedule "${schedule.name}": ${error instanceof Error ? error.message : String(error)}`);
       // Still set up the next timer even if there was an error

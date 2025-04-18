@@ -23,6 +23,7 @@ interface ScheduleFormProps {
   availableModes: ModeConfig[];
   onSave: (formData: ScheduleFormData) => void;
   onCancel: () => void;
+  onValidityChange?: (isValid: boolean) => void;
 }
 
 export interface ScheduleFormHandle {
@@ -58,12 +59,26 @@ const getDefinedForm = (initialData?: Partial<ScheduleFormData>): RequiredSchedu
 });
 
 const ScheduleForm = forwardRef<ScheduleFormHandle, ScheduleFormProps>(
-  ({ initialData, isEditing, availableModes, onSave, onCancel }, ref) => {
+  ({ initialData, isEditing, availableModes, onSave, onCancel, onValidityChange }, ref) => {
   // If creating (not editing) and no selectedDays provided, default to all days selected
   const initialFormData = (!isEditing && (!initialData || !initialData.selectedDays))
     ? { ...initialData, selectedDays: { ...allDaysSelected } }
     : initialData;
   const [form, setForm] = useState<RequiredScheduleFormData>(getDefinedForm(initialFormData));
+
+  // Validation state for parent
+  const isValid =
+    !!form.name.trim() &&
+    !!form.mode &&
+    !!form.taskInstructions.trim() &&
+    !!form.timeInterval &&
+    !isNaN(Number(form.timeInterval)) &&
+    Number(form.timeInterval) > 0;
+
+  // Notify parent of validity changes
+  useEffect(() => {
+    if (onValidityChange) onValidityChange(isValid);
+  }, [isValid, onValidityChange]);
 
   // Expose submitForm to parent via ref
   useImperativeHandle(ref, () => ({
@@ -136,6 +151,7 @@ const ScheduleForm = forwardRef<ScheduleFormHandle, ScheduleFormProps>(
         </h4>
         <LabeledInput
           label="Schedule Name"
+          required
           className="w-full"
           placeholder="Enter schedule name..."
           value={form.name}
@@ -143,7 +159,10 @@ const ScheduleForm = forwardRef<ScheduleFormHandle, ScheduleFormProps>(
         />
         <div className="flex flex-col gap-3 ">
           <div className="flex flex-col gap-2">
-            <label className="text-vscode-descriptionForeground text-sm">Mode</label>
+            <label className="text-vscode-descriptionForeground text-sm">
+              Mode
+              <span className="text-red-500 ml-0.5">*</span>
+            </label>
             <Select value={form.mode} onValueChange={v => setField("mode", v)}>
               <SelectTrigger className="w-full bg-vscode-dropdown-background !bg-vscode-dropdown-background hover:!bg-vscode-dropdown-background border border-vscode-dropdown-border">
                 <SelectValue placeholder="Select a mode" />
@@ -156,7 +175,10 @@ const ScheduleForm = forwardRef<ScheduleFormHandle, ScheduleFormProps>(
             </Select>
           </div>
           <div className="flex flex-col gap-2">
-            <label className="text-vscode-descriptionForeground text-sm">Instructions</label>
+            <label className="text-vscode-descriptionForeground text-sm">
+              Instructions
+              <span className="text-red-500 ml-0.5">*</span>
+            </label>
             <AutosizeTextarea
               className="w-full p-3 bg-vscode-input-background !bg-vscode-input-background border border-vscode-input-border"
               minHeight={100}
@@ -184,7 +206,10 @@ const ScheduleForm = forwardRef<ScheduleFormHandle, ScheduleFormProps>(
         {form.scheduleType === "time" && (
           <div className="flex flex-col gap-3 mt-2">
             <div className="flex items-center gap-2">
-              <label className="text-vscode-descriptionForeground text-sm">Every</label>
+              <label className="text-vscode-descriptionForeground text-sm">
+                Every
+                <span className="text-red-500 ml-0.5">*</span>
+              </label>
               <Input
                 type="number"
                 min="1"
@@ -304,7 +329,10 @@ const ScheduleForm = forwardRef<ScheduleFormHandle, ScheduleFormProps>(
         <Button variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button onClick={handleSave}>
+        <Button
+          onClick={handleSave}
+          disabled={!isValid}
+        >
           {isEditing ? "Update Schedule" : "Save Schedule"}
         </Button>
       </div>

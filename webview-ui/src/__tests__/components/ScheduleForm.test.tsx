@@ -92,6 +92,32 @@ const availableModes: ModeConfig[] = [
 ];
 
 describe("ScheduleForm", () => {
+  it("shows a red asterisk for required fields", () => {
+    render(
+      <ScheduleForm
+        isEditing={false}
+        availableModes={availableModes}
+        onSave={jest.fn()}
+        onCancel={jest.fn()}
+      />
+    );
+    // Schedule Name
+    const nameLabel = screen.getByText(/Schedule Name/i).closest("label");
+    expect(nameLabel).toHaveTextContent("*");
+    expect(nameLabel?.querySelector(".text-red-500")).not.toBeNull();
+    // Mode
+    const modeLabel = screen.getByText(/^Mode$/i).closest("label");
+    expect(modeLabel).toHaveTextContent("*");
+    expect(modeLabel?.querySelector(".text-red-500")).not.toBeNull();
+    // Instructions
+    const instructionsLabel = screen.getByText(/^Instructions$/i).closest("label");
+    expect(instructionsLabel).toHaveTextContent("*");
+    expect(instructionsLabel?.querySelector(".text-red-500")).not.toBeNull();
+    // Every (Time Interval)
+    const everyLabel = screen.getByText(/^Every$/i).closest("label");
+    expect(everyLabel).toHaveTextContent("*");
+    expect(everyLabel?.querySelector(".text-red-500")).not.toBeNull();
+  });
   it("should have all days selected by default when creating a new schedule", () => {
     render(
       <ScheduleForm

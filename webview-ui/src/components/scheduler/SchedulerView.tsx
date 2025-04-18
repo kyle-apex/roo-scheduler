@@ -52,7 +52,7 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 
 	// Ref for ScheduleForm
 	const scheduleFormRef = useRef<ScheduleFormHandle>(null);
-
+	const [isFormValid, setIsFormValid] = useState(false);
 	// No need for default start time effect - handled in ScheduleForm
 	
 	// Load schedules from file
@@ -243,6 +243,7 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 								resetForm();
 								setActiveTab("schedules");
 							}}
+							data-testid="toggle-active-button"
 						>
 							Cancel
 						</Button>
@@ -250,6 +251,8 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 							onClick={() => {
 								scheduleFormRef.current?.submitForm();
 							}}
+							disabled={!isFormValid}
+							data-testid="header-save-button"
 						>
 							Save
 						</Button>
@@ -286,6 +289,7 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 										data-testid={`schedule-item-${schedule.id}`}
 										key={schedule.id}
 										className="cursor-pointer border-b border-vscode-panel-border"
+										onClick={() => editSchedule(schedule.id)}
 									>
 										<div className="flex items-start p-3 gap-2">
 											<div className="flex-1">
@@ -303,7 +307,8 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 																	? "text-vscode-descriptionForeground"
 																	: "text-green-600"
 															}`}
-															onClick={() => {
+															onClick={e => {
+																e.stopPropagation();
 																// Treat undefined as true (so toggle to false)
 																const isActive = schedule.active !== false;
 																// Toggle active state
@@ -356,7 +361,7 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 															className="h-7 w-7 p-0"
 															title="Edit schedule"
 															data-testid="edit-schedule-button"
-															onClick={() => editSchedule(schedule.id)}
+															onClick={e => { e.stopPropagation(); editSchedule(schedule.id); }}
 															aria-label="Edit schedule"
 														>
 															<span className="codicon codicon-edit" />
@@ -369,7 +374,8 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 															className="h-7 w-7 p-0"
 															title="Delete schedule"
 															data-testid="delete-schedule-button"
-															onClick={(e) => {
+															onClick={e => {
+																e.stopPropagation();
 																// Show confirmation dialog
 																setScheduleToDelete(schedule.id);
 																setDialogOpen(true);
@@ -430,6 +436,7 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 								resetForm()
 								setActiveTab("schedules")
 							}}
+							onValidityChange={setIsFormValid}
 						/>
 					</TabsContent>
 				</Tabs>

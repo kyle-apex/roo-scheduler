@@ -104,6 +104,11 @@ const ScheduleListItem: React.FC<ScheduleListItemProps> = ({ schedule, onEdit, o
             </div>
           )}
         </CardContent>
+        {schedule.lastExecutionTime && (
+          <div className="px-6 pb-1 text-xs text-vscode-descriptionForeground">
+            Last executed: {new Date(schedule.lastExecutionTime).toLocaleString()}
+          </div>
+        )}
         <CardFooter className="pt-2 flex justify-end gap-2">
           <Button
             variant="outline"

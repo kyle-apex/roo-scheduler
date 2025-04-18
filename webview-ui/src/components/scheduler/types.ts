@@ -18,4 +18,6 @@ export interface Schedule {
   active?: boolean; // If undefined, treat as true (backward compatibility)
   createdAt: string;
   updatedAt: string;
+  lastExecutionTime?: string;
+  lastTaskId?: string;
 }

@@ -74,12 +74,10 @@ describe("ScheduleListItem", () => {
     expect(onDelete).not.toHaveBeenCalled()
   })
 
-  it("renders the active/inactive toggle button with fixed width in both states", () => {
-    const onEdit = jest.fn()
-    const onDelete = jest.fn()
-    const onToggleActive = jest.fn()
-
-    // Active state
+  it("renders the active toggle button with fixed width", () => {
+    const onEdit = jest.fn();
+    const onDelete = jest.fn();
+    const onToggleActive = jest.fn();
     render(
       <ScheduleListItem
         schedule={{ ...mockSchedule, active: true }}
@@ -87,11 +85,15 @@ describe("ScheduleListItem", () => {
         onDelete={onDelete}
         onToggleActive={onToggleActive}
       />
-    )
-    let toggleButton = screen.getByRole("button", { name: /deactivate schedule/i })
-    expect(toggleButton).toHaveClass("w-20")
+    );
+    const toggleButton = screen.getByRole("button", { name: /deactivate schedule/i });
+    expect(toggleButton).toHaveClass("w-20");
+  });
 
-    // Inactive state
+  it("renders the inactive toggle button with fixed width", () => {
+    const onEdit = jest.fn();
+    const onDelete = jest.fn();
+    const onToggleActive = jest.fn();
     render(
       <ScheduleListItem
         schedule={{ ...mockSchedule, active: false }}
@@ -99,8 +101,26 @@ describe("ScheduleListItem", () => {
         onDelete={onDelete}
         onToggleActive={onToggleActive}
       />
-    )
-    toggleButton = screen.getByRole("button", { name: /activate schedule/i })
-    expect(toggleButton).toHaveClass("w-20")
-  })
+    );
+    const toggleButton = screen.getByRole("button", { name: /activate schedule/i });
+    expect(toggleButton).toHaveClass("w-20");
+  });
+it("renders the last execution time if present", () => {
+  const onEdit = jest.fn();
+  const onDelete = jest.fn();
+  const onToggleActive = jest.fn();
+  const lastExecutionTime = "2023-04-16T20:30:00.000Z";
+  render(
+    <ScheduleListItem
+      schedule={{ ...mockSchedule, lastExecutionTime }}
+      onEdit={onEdit}
+      onDelete={onDelete}
+      onToggleActive={onToggleActive}
+    />
+  );
+  // The formatted date string should appear
+  const formatted = new Date(lastExecutionTime).toLocaleString();
+  expect(screen.getByText(new RegExp(`Last executed: ${formatted}`))).toBeInTheDocument();
+});
+
 })

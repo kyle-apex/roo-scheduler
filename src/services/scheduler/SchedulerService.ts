@@ -27,6 +27,7 @@ interface Schedule {
   createdAt: string;
   updatedAt: string;
   lastExecutionTime?: string;
+  lastTaskId?: string; // Roo Cline task ID of the last execution
 }
 
 interface SchedulesFile {
@@ -301,54 +302,57 @@ private async executeSchedule(schedule: Schedule): Promise<void> {
   }
   this.log(`Executing schedule "${schedule.name}"`);
 
-
-    // Check if we should respect activity requirement
-    if (schedule.requireActivity) {
-      const lastExecutionTime = schedule.lastExecutionTime ? new Date(schedule.lastExecutionTime).getTime() : 0;
-      if (this.lastActivityTime <= lastExecutionTime) {
-        this.log(`Skipping execution of "${schedule.name}" due to no activity since last execution`);
-        // Set up the next timer
-        this.setupTimerForSchedule(schedule);
-        return;
-      }
-    }
-
-    try {
-      // Process the task
-      await this.processTask(schedule.mode, schedule.taskInstructions);
-      
-      // Update last execution time
-      const updatedSchedule = await this.updateSchedule(schedule.id, { lastExecutionTime: new Date().toISOString() });
-      
+  // Check if we should respect activity requirement
+  if (schedule.requireActivity) {
+    const lastExecutionTime = schedule.lastExecutionTime ? new Date(schedule.lastExecutionTime).getTime() : 0;
+    if (this.lastActivityTime <= lastExecutionTime) {
+      this.log(`Skipping execution of "${schedule.name}" due to no activity since last execution`);
       // Set up the next timer
-      if (updatedSchedule) {
-        this.setupTimerForSchedule(updatedSchedule);
-      }
-    } catch (error) {
-      this.log(`Error executing schedule "${schedule.name}": ${error instanceof Error ? error.message : String(error)}`);
-      // Still set up the next timer even if there was an error
       this.setupTimerForSchedule(schedule);
+      return;
     }
   }
 
-  private async processTask(mode: string, taskInstructions: string): Promise<void> {
-    console.log('in process task', mode, taskInstructions);
-    try {
-      // Validate the mode
-      const modeConfig = getModeBySlug(mode);
-      if (!modeConfig) {
-        throw new Error(`Invalid mode: ${mode}`);
-      }
+  try {
+    // Process the task and get the task ID
+    const taskId = await this.processTask(schedule.mode, schedule.taskInstructions);
 
-      // Delegate to RooService for Roo Cline extension interaction
-      await RooService.startTaskWithMode(mode, taskInstructions);
+    // Update last execution time and last task ID
+    const updatedSchedule = await this.updateSchedule(schedule.id, {
+      lastExecutionTime: new Date().toISOString(),
+      lastTaskId: taskId,
+    });
 
-      this.log(`Successfully started task with mode "${mode}"`);
-    } catch (error) {
-      this.log(`Error processing task: ${error instanceof Error ? error.message : String(error)}`);
-      throw error;
+    // Set up the next timer
+    if (updatedSchedule) {
+      this.setupTimerForSchedule(updatedSchedule);
     }
+  } catch (error) {
+    this.log(`Error executing schedule "${schedule.name}": ${error instanceof Error ? error.message : String(error)}`);
+    // Still set up the next timer even if there was an error
+    this.setupTimerForSchedule(schedule);
   }
+}
+
+private async processTask(mode: string, taskInstructions: string): Promise<string> {
+  console.log('in process task', mode, taskInstructions);
+  try {
+    // Validate the mode
+    const modeConfig = getModeBySlug(mode);
+    if (!modeConfig) {
+      throw new Error(`Invalid mode: ${mode}`);
+    }
+
+    // Delegate to RooService for Roo Cline extension interaction and get the task ID
+    const taskId = await RooService.startTaskWithMode(mode, taskInstructions);
+
+    this.log(`Successfully started task with mode "${mode}", taskId: ${taskId}`);
+    return taskId;
+  } catch (error) {
+    this.log(`Error processing task: ${error instanceof Error ? error.message : String(error)}`);
+    throw error;
+  }
+}
 
   private log(message: string): void {
     const timestamp = new Date().toISOString();

@@ -35,6 +35,7 @@ const TIME_UNITS = [
 ];
 
 const defaultDays: Record<string, boolean> = { sun: false, mon: false, tue: false, wed: false, thu: false, fri: false, sat: false };
+const allDaysSelected: Record<string, boolean> = { sun: true, mon: true, tue: true, wed: true, thu: true, fri: true, sat: true };
 
 const getDefinedForm = (initialData?: Partial<ScheduleFormData>): RequiredScheduleFormData => ({
   name: initialData?.name ?? "",
@@ -51,12 +52,18 @@ const getDefinedForm = (initialData?: Partial<ScheduleFormData>): RequiredSchedu
   expirationHour: initialData?.expirationHour ?? "00",
   expirationMinute: initialData?.expirationMinute ?? "00",
   requireActivity: initialData?.requireActivity ?? false,
-  active: initialData?.active ?? true
+  active: initialData?.active ?? true,
+  lastExecutionTime: initialData?.lastExecutionTime ?? "",
+  lastTaskId: initialData?.lastTaskId ?? ""
 });
 
 const ScheduleForm = forwardRef<ScheduleFormHandle, ScheduleFormProps>(
   ({ initialData, isEditing, availableModes, onSave, onCancel }, ref) => {
-  const [form, setForm] = useState<RequiredScheduleFormData>(getDefinedForm(initialData));
+  // If creating (not editing) and no selectedDays provided, default to all days selected
+  const initialFormData = (!isEditing && (!initialData || !initialData.selectedDays))
+    ? { ...initialData, selectedDays: { ...allDaysSelected } }
+    : initialData;
+  const [form, setForm] = useState<RequiredScheduleFormData>(getDefinedForm(initialFormData));
 
   // Expose submitForm to parent via ref
   useImperativeHandle(ref, () => ({

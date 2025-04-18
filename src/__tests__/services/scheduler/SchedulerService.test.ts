@@ -492,7 +492,7 @@ describe('SchedulerService', () => {
     (getModeBySlug as jest.Mock).mockReturnValue({ slug: 'code', name: 'Code' });
 
     // Mock RooService
-    mockStartTaskWithMode = jest.spyOn(RooService, 'startTaskWithMode').mockResolvedValue(undefined);
+    mockStartTaskWithMode = jest.spyOn(RooService, 'startTaskWithMode').mockResolvedValue("mock-task-id");
 
     // Mock context
     mockContext = {

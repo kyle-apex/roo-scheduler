@@ -11,7 +11,14 @@ export class RooService {
    * @param taskInstructions The instructions for the task.
    * @throws Error if the Roo Cline extension or its API is not available.
    */
-  public static async startTaskWithMode(mode: string, taskInstructions: string): Promise<void> {
+  /**
+   * Starts a new task in the Roo Cline extension with the specified mode and instructions.
+   * @param mode The mode slug to use.
+   * @param taskInstructions The instructions for the task.
+   * @returns The ID of the new task.
+   * @throws Error if the Roo Cline extension or its API is not available.
+   */
+  public static async startTaskWithMode(mode: string, taskInstructions: string): Promise<string> {
     const api = RooService.getRooClineApi();
 
     // Get the current configuration
@@ -24,11 +31,12 @@ export class RooService {
       customModePrompts: config.customModePrompts || {}
     };
 
-    // Start a new task with the specified mode and instructions
-    await api.startNewTask({
+    // Start a new task with the specified mode and instructions, and return the task ID
+    const taskId = await api.startNewTask({
       configuration: updatedConfig,
       text: taskInstructions
     });
+    return taskId;
   }
 
   /**

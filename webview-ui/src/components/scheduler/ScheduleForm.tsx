@@ -76,11 +76,18 @@ const ScheduleForm = forwardRef<ScheduleFormHandle, ScheduleFormProps>(
   useEffect(() => {
     if (!isEditing && !initialData?.startDate) {
       const now = new Date();
-      const nextHour = (now.getHours() + 1) % 24;
+      const currentHour = now.getHours();
+      
+      // Format date in local time zone (YYYY-MM-DD)
+      const year = now.getFullYear();
+      const month = (now.getMonth() + 1).toString().padStart(2, '0');
+      const day = now.getDate().toString().padStart(2, '0');
+      const localDate = `${year}-${month}-${day}`;
+      
       setForm(f => ({
         ...f,
-        startDate: now.toISOString().split('T')[0],
-        startHour: nextHour.toString().padStart(2, '0'),
+        startDate: localDate,
+        startHour: currentHour.toString().padStart(2, '0'),
         startMinute: '00'
       }));
     }
@@ -134,8 +141,7 @@ const ScheduleForm = forwardRef<ScheduleFormHandle, ScheduleFormProps>(
           value={form.name}
           onChange={e => setField("name", e.target.value)}
         />
-        <div className="flex flex-col gap-3 mt-4">
-          <h4 className="text-vscode-foreground text-lg font-medium m-0">Task</h4>
+        <div className="flex flex-col gap-3 ">
           <div className="flex flex-col gap-2">
             <label className="text-vscode-descriptionForeground text-sm">Mode</label>
             <Select value={form.mode} onValueChange={v => setField("mode", v)}>
@@ -163,7 +169,6 @@ const ScheduleForm = forwardRef<ScheduleFormHandle, ScheduleFormProps>(
         </div>
       </div>
       <div className="flex flex-col gap-3">
-        <h4 className="text-vscode-foreground text-lg font-medium m-0">Schedule</h4>
         <div className="flex flex-col gap-2">
           <label className="text-vscode-descriptionForeground text-sm">Schedule Type</label>
           <Select value={form.scheduleType} onValueChange={v => setField("scheduleType", v)}>

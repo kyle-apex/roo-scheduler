@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from "react"
 import { Button } from "../../components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs"
+import { Virtuoso } from "react-virtuoso"
+import { cn } from "../../lib/utils"
 
 import { useExtensionState } from "../../context/ExtensionStateContext"
 import {
@@ -10,9 +12,11 @@ import {
 import { vscode } from "../../utils/vscode"
 import { Tab, TabContent, TabHeader } from "../common/Tab"
 import { useAppTranslation } from "../../i18n/TranslationContext"
+import { VSCodeCheckbox } from "@vscode/webview-ui-toolkit/react"
+import { formatDate, formatLargeNumber } from "../../utils/format"
+import ConfirmationDialog from "../../components/ui/ConfirmationDialog"
 
 // Import new components
-import ScheduleList from "./ScheduleList"
 import ScheduleForm from "./ScheduleForm"
 import type { ScheduleFormHandle } from "./ScheduleForm"
 import { Schedule } from "./types"
@@ -38,6 +42,11 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 	// Form editing state
 	const [isEditing, setIsEditing] = useState<boolean>(false)
 	const [initialFormData, setInitialFormData] = useState<Partial<Schedule>>({})
+	
+	// Delete confirmation dialog state
+	const [dialogOpen, setDialogOpen] = useState(false)
+	const [scheduleToDelete, setScheduleToDelete] = useState<string | null>(null)
+	
 	// Get all available modes (both default and custom)
 	const availableModes = useMemo(() => getAllModes(customModes), [customModes])
 
@@ -253,39 +262,161 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 			<TabContent>
 				<Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
 
-					<TabsContent value="schedules" className="space-y-4">
-						
-						<ScheduleList
-							schedules={schedules}
-							onEdit={editSchedule}
-							onDelete={deleteSchedule}
-							onToggleActive={(scheduleId, active) => {
-								// 1. Call backend to toggle schedule active state
-								vscode.postMessage({
-									type: "toggleScheduleActive",
-									scheduleId,
-									active,
-								});
-								// 2. Update local state and storage as before
-								const updatedSchedules = schedules.map(s =>
-									s.id === scheduleId ? { ...s, active } : s
-								);
-								try {
-									localStorage.setItem('roo-schedules', JSON.stringify(updatedSchedules));
-									console.log("Saved updated schedules to localStorage after toggle active");
-								} catch (e) {
-									console.error("Failed to save schedules to localStorage after toggle active:", e);
-								}
-								const fileContent = JSON.stringify({ schedules: updatedSchedules }, null, 2);
-								console.log("Saving updated schedules to file after toggle active:", fileContent);
-								vscode.postMessage({
-									type: "openFile",
-									text: "./.roo/schedules.json",
-									values: { create: true, content: fileContent }
-								});
-								setSchedules(updatedSchedules);
-							}}
-						/>
+					<TabsContent value="schedules" className="space-y-2">
+						{schedules.length === 0 ? (
+							<div className="text-center py-8 text-vscode-descriptionForeground">
+								No schedules found. Create your first schedule to get started.
+							</div>
+						) : (
+							<Virtuoso
+								style={{
+									height: "400px",
+									overflowY: "auto",
+								}}
+								data={schedules}
+								data-testid="virtuoso-container"
+								initialTopMostItemIndex={0}
+								components={{
+									List: React.forwardRef((props, ref) => (
+										<div {...props} ref={ref} data-testid="virtuoso-item-list" />
+									)),
+								}}
+								itemContent={(index, schedule) => (
+									<div
+										data-testid={`schedule-item-${schedule.id}`}
+										key={schedule.id}
+										className="cursor-pointer border-b border-vscode-panel-border"
+									>
+										<div className="flex items-start p-3 gap-2">
+											<div className="flex-1">
+												<div className="flex justify-between items-center">
+													<span className="text-vscode-foreground font-medium">
+														{schedule.name}
+													</span>
+													<div className="flex flex-row gap-1">
+														{/* Active/Inactive Status Indicator */}
+														<Button
+															variant="ghost"
+															size="sm"
+															className={`h-7 px-2 py-0 text-xs font-semibold rounded ${
+																schedule.active === false
+																	? "text-vscode-descriptionForeground"
+																	: "text-green-600"
+															}`}
+															onClick={() => {
+																// Treat undefined as true (so toggle to false)
+																const isActive = schedule.active !== false;
+																// Toggle active state
+																const active = !isActive;
+																
+																// 1. Call backend to toggle schedule active state
+																vscode.postMessage({
+																	type: "toggleScheduleActive",
+																	scheduleId: schedule.id,
+																	active,
+																});
+																
+																// 2. Update local state and storage
+																const updatedSchedules = schedules.map(s =>
+																	s.id === schedule.id ? { ...s, active } : s
+																);
+																
+																try {
+																	localStorage.setItem('roo-schedules', JSON.stringify(updatedSchedules));
+																	console.log("Saved updated schedules to localStorage after toggle active");
+																} catch (e) {
+																	console.error("Failed to save schedules to localStorage after toggle active:", e);
+																}
+																
+																const fileContent = JSON.stringify({ schedules: updatedSchedules }, null, 2);
+																console.log("Saving updated schedules to file after toggle active:", fileContent);
+																
+																vscode.postMessage({
+																	type: "openFile",
+																	text: "./.roo/schedules.json",
+																	values: { create: true, content: fileContent }
+																});
+																
+																setSchedules(updatedSchedules);
+															}}
+															aria-label={schedule.active === false ? "Activate schedule" : "Deactivate schedule"}
+														>
+															<span className="flex items-center">
+																<span className={`inline-block w-2 h-2 rounded-full mr-1 ${
+																	schedule.active === false ? "bg-vscode-descriptionForeground" : "bg-green-600"
+																}`}></span>
+																{schedule.active === false ? "Inactive" : "Active"}
+															</span>
+														</Button>
+														
+														{/* Edit Button */}
+														<Button
+															variant="ghost"
+															size="sm"
+															className="h-7 w-7 p-0"
+															title="Edit schedule"
+															data-testid="edit-schedule-button"
+															onClick={() => editSchedule(schedule.id)}
+															aria-label="Edit schedule"
+														>
+															<span className="codicon codicon-edit" />
+														</Button>
+														
+														{/* Delete Button */}
+														<Button
+															variant="ghost"
+															size="sm"
+															className="h-7 w-7 p-0"
+															title="Delete schedule"
+															data-testid="delete-schedule-button"
+															onClick={(e) => {
+																// Show confirmation dialog
+																setScheduleToDelete(schedule.id);
+																setDialogOpen(true);
+															}}
+															aria-label="Delete schedule"
+														>
+															<span className="codicon codicon-trash text-vscode-errorForeground" />
+														</Button>
+													</div>
+												</div>
+												
+												<div className="text-sm text-vscode-descriptionForeground mt-1">
+													Mode: {schedule.modeDisplayName || schedule.mode} • Type: {schedule.scheduleType === "time" ? "Time Schedule" : "After Task Completion"}
+												</div>
+												
+												<div
+													className="text-sm text-vscode-descriptionForeground mt-2"
+													style={{
+														overflow: "hidden",
+														display: "-webkit-box",
+														WebkitLineClamp: 2,
+														WebkitBoxOrient: "vertical"
+													}}
+												>
+													{schedule.taskInstructions}
+												</div>
+												
+												{schedule.scheduleType === "time" && (
+													<div className="mt-2 text-xs text-vscode-descriptionForeground">
+														Every {schedule.timeInterval} {schedule.timeUnit}(s)
+														{Object.values(schedule.selectedDays || {}).filter(Boolean).length > 0 && (
+															<span> • {Object.values(schedule.selectedDays || {}).filter(Boolean).length} days selected</span>
+														)}
+													</div>
+												)}
+												
+												{schedule.lastExecutionTime && (
+													<div className="mt-1 text-xs text-vscode-descriptionForeground">
+														Last executed: {new Date(schedule.lastExecutionTime).toLocaleString()}
+													</div>
+												)}
+											</div>
+										</div>
+									</div>
+								)}
+							/>
+						)}
 					</TabsContent>
 					
 					<TabsContent value="edit">
@@ -304,6 +435,22 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 				</Tabs>
 			</TabContent>
 
+			{/* Confirmation Dialog for Schedule Deletion */}
+			<ConfirmationDialog
+				open={dialogOpen}
+				onOpenChange={setDialogOpen}
+				title="Delete Schedule"
+				description="Are you sure you want to delete this schedule? This action cannot be undone."
+				confirmLabel="Delete"
+				cancelLabel="Cancel"
+				onConfirm={() => {
+					if (scheduleToDelete) {
+						deleteSchedule(scheduleToDelete);
+						setScheduleToDelete(null);
+					}
+				}}
+				confirmClassName="bg-vscode-errorForeground hover:bg-vscode-errorForeground/90"
+			/>
 		</Tab>
 	)
 }

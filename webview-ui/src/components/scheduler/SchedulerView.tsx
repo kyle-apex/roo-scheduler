@@ -237,6 +237,7 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 				taskInteraction: schedule.taskInteraction,
 				inactivityDelay: schedule.inactivityDelay,
 				lastExecutionTime: schedule.lastExecutionTime,
+				lastSkipTime: schedule.lastSkipTime,
 				lastTaskId: schedule.lastTaskId
 			})
 			

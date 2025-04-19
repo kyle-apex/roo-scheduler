@@ -35,7 +35,3 @@ logs
 
 # Vite development
 .vite-port
-webview-ui/src/components/scheduler/SchedulerView.tsx
-.roo/system-prompt-arch
-.roo/system-prompt-coder
-.roomodes

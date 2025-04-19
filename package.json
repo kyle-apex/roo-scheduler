@@ -59,7 +59,7 @@
 				{
 					"id": "roo-scheduler-ActivityBar",
 					"title": "Roo Scheduler",
-					"icon": "assets/icons/icon.svg"
+					"icon": "assets/icons/scheduler-icon.svg"
 				}
 			]
 		},

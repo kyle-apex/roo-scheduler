@@ -58,7 +58,7 @@
 			"activitybar": [
 				{
 					"id": "roo-scheduler-ActivityBar",
-					"title": "Roo Scheduler",
+					"title": "Roo Scheduler!",
 					"icon": "assets/icons/icon.svg"
 				}
 			]
@@ -74,6 +74,12 @@
 		},
 		"commands": [
 			{
+				"command": "roo-scheduler.reloadWindowDev",
+				"title": "Reload Window (Dev Only)",
+				"icon": "$(refresh)",
+				"category": "Developer"
+			},
+			{
 				"command": "roo-scheduler.openRooClineExtension",
 				"title": "Open Roo-Cline Extension",
 				"icon": "assets/icons/icon.svg"
@@ -81,6 +87,11 @@
 		],
 		"menus": {
 			"view/title": [
+				{
+					"command": "roo-scheduler.reloadWindowDev",
+					"group": "navigation@0",
+					"when": "view == roo-scheduler.SidebarProvider && rooSchedulerDevMode"
+				},
 				{
 					"command": "roo-scheduler.openRooClineExtension",
 					"group": "navigation@1",
@@ -151,6 +162,7 @@
 		"test": "node scripts/run-tests.js",
 		"test:extension": "jest",
 		"test:webview": "cd webview-ui && npm run test",
+		"test:rooservice": "npm run vscode-test && cd e2e && npx @vscode/test-cli --config rooservice-test.mjs",
 		"prepare": "husky",
 		"publish:marketplace": "vsce publish && ovsx publish",
 		"publish": "npm run build && changeset publish && npm install --package-lock-only",

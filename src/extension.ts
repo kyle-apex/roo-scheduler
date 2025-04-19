@@ -39,6 +39,11 @@ export async function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(outputChannel)
 	outputChannel.appendLine("Roo-Code extension activated")
 
+	// Set a custom context variable for development mode
+	// This is used to conditionally show the reload window button
+	const isDevelopmentMode = context.extensionMode === vscode.ExtensionMode.Development
+	await vscode.commands.executeCommand('setContext', 'rooSchedulerDevMode', isDevelopmentMode)
+	
 	// Migrate old settings to new
 	await migrateSettings(context, outputChannel)
 
@@ -61,6 +66,13 @@ export async function activate(context: vscode.ExtensionContext) {
 		context.globalState.update("allowedCommands", defaultCommands)
 	}
 	
+	// Register command to reload window (dev only button)
+	context.subscriptions.push(
+		vscode.commands.registerCommand("roo-scheduler.reloadWindowDev", async () => {
+			await vscode.commands.executeCommand("workbench.action.reloadWindow")
+		})
+	)
+
 	// Register command to open the roo-cline extension (always register)
 	context.subscriptions.push(
 		vscode.commands.registerCommand("roo-scheduler.openRooClineExtension", async () => {

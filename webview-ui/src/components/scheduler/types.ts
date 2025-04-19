@@ -21,6 +21,6 @@ export interface Schedule {
   createdAt: string;
   updatedAt: string;
   lastExecutionTime?: string;
-  lastSkipTime?: string;
+  lastSkippedTime?: string;
   lastTaskId?: string;
 }

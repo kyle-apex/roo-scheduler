@@ -12,8 +12,6 @@ import {
 import { vscode } from "../../utils/vscode"
 import { Tab, TabContent, TabHeader } from "../common/Tab"
 import { useAppTranslation } from "../../i18n/TranslationContext"
-import { VSCodeCheckbox } from "@vscode/webview-ui-toolkit/react"
-import { formatDate, formatLargeNumber } from "../../utils/format"
 import ConfirmationDialog from "../../components/ui/ConfirmationDialog"
 
 // Import new components
@@ -237,7 +235,7 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 				taskInteraction: schedule.taskInteraction,
 				inactivityDelay: schedule.inactivityDelay,
 				lastExecutionTime: schedule.lastExecutionTime,
-				lastSkipTime: schedule.lastSkipTime,
+				lastSkippedTime: schedule.lastSkippedTime,
 				lastTaskId: schedule.lastTaskId
 			})
 			
@@ -302,7 +300,7 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 				{activeTab === "edit" ? (
 					<div className="flex gap-2">
 						<Button
-							variant="outline"
+							variant="secondary"
 							onClick={() => {
 								resetForm();
 								setActiveTab("schedules");

@@ -58,7 +58,7 @@ const getDefinedForm = (initialData?: Partial<ScheduleFormData>): RequiredSchedu
   taskInteraction: initialData?.taskInteraction ?? "wait",
   inactivityDelay: initialData?.inactivityDelay ?? "10", // Default to 10 minutes
   lastExecutionTime: initialData?.lastExecutionTime ?? "",
-  lastSkipTime: initialData?.lastSkipTime ?? "",
+  lastSkippedTime: initialData?.lastSkippedTime ?? "",
   lastTaskId: initialData?.lastTaskId ?? ""
 });
 
@@ -347,7 +347,7 @@ const ScheduleForm = forwardRef<ScheduleFormHandle, ScheduleFormProps>(
         )}
       </div>
       <div className="flex justify-end mt-6 gap-3">
-        <Button variant="outline" onClick={onCancel}>
+        <Button variant="secondary" onClick={onCancel}>
           Cancel
         </Button>
         <Button

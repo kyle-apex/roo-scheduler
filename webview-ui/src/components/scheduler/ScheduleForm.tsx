@@ -54,6 +54,8 @@ const getDefinedForm = (initialData?: Partial<ScheduleFormData>): RequiredSchedu
   expirationMinute: initialData?.expirationMinute ?? "00",
   requireActivity: initialData?.requireActivity ?? false,
   active: initialData?.active ?? true,
+  taskInteraction: initialData?.taskInteraction ?? "wait",
+  inactivityDelay: initialData?.inactivityDelay ?? "10", // Default to 10 minutes
   lastExecutionTime: initialData?.lastExecutionTime ?? "",
   lastTaskId: initialData?.lastTaskId ?? ""
 });
@@ -73,7 +75,11 @@ const ScheduleForm = forwardRef<ScheduleFormHandle, ScheduleFormProps>(
     !!form.taskInstructions.trim() &&
     !!form.timeInterval &&
     !isNaN(Number(form.timeInterval)) &&
-    Number(form.timeInterval) > 0;
+    Number(form.timeInterval) > 0 &&
+    (form.taskInteraction !== "wait" ||
+      (!!form.inactivityDelay &&
+       !isNaN(Number(form.inactivityDelay)) &&
+       Number(form.inactivityDelay) > 0));
 
   // Notify parent of validity changes
   useEffect(() => {
@@ -322,6 +328,39 @@ const ScheduleForm = forwardRef<ScheduleFormHandle, ScheduleFormProps>(
                 </label>
               </div>
             </div>
+            <div className="flex flex-col gap-2 mt-2">
+              <label className="text-vscode-descriptionForeground text-sm">When a task is already running</label>
+              <Select value={form.taskInteraction} onValueChange={(v: "wait" | "interrupt" | "skip") => setField("taskInteraction", v)}>
+                <SelectTrigger className="w-full bg-vscode-dropdown-background !bg-vscode-dropdown-background hover:!bg-vscode-dropdown-background border border-vscode-dropdown-border">
+                  <SelectValue placeholder="Select behavior" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="wait">Run after specified inactivity</SelectItem>
+                  <SelectItem value="interrupt">Interrupt current task</SelectItem>
+                  <SelectItem value="skip">Skip this execution</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {form.taskInteraction === "wait" && (
+              <div className="flex flex-col gap-2 mt-2">
+                <label className="text-vscode-descriptionForeground text-sm">
+                  Inactivity delay (minutes)
+                  <span className="text-red-500 ml-0.5">*</span>
+                </label>
+                <Input
+                  type="number"
+                  min="1"
+                  className="w-full"
+                  value={form.inactivityDelay}
+                  onChange={e => {
+                    const value = parseInt(e.target.value);
+                    if (!isNaN(value) && value > 0) setField("inactivityDelay", value.toString());
+                    else if (e.target.value === '') setField("inactivityDelay", '');
+                  }}
+                  aria-label="Inactivity delay in minutes"
+                />
+              </div>
+            )}
           </div>
         )}
       </div>

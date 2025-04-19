@@ -154,6 +154,7 @@ describe("ScheduleForm", () => {
     expect(screen.getByText(/Start Time/i)).toBeInTheDocument();
     expect(screen.getByText(/Expires/i)).toBeInTheDocument();
     expect(screen.getByText(/Only execute if I had activity/i)).toBeInTheDocument();
+    expect(screen.getByText(/When a task is already running/i)).toBeInTheDocument();
     expect(screen.getByText(/Cancel/i)).toBeInTheDocument();
     expect(screen.getByText(/Save Schedule/i)).toBeInTheDocument();
   });
@@ -206,6 +207,7 @@ describe("ScheduleForm", () => {
         // The mode remains "code" in the test environment
         mode: "code",
         taskInstructions: "Do something",
+        taskInteraction: "wait", // Default value
         selectedDays: expect.objectContaining({
           mon: false,
           sun: true,
@@ -239,5 +241,85 @@ describe("ScheduleForm", () => {
     fireEvent.click(target);
     // Now the checkmark SVG should be present
     expect(target.innerHTML).toMatch(/polyline/);
+  });
+
+  it("includes taskInteraction in form data", () => {
+    const onSave = jest.fn();
+    render(
+      <ScheduleForm
+        isEditing={false}
+        availableModes={availableModes}
+        onSave={onSave}
+        onCancel={jest.fn()}
+      />
+    );
+    
+    // Fill required fields
+    fireEvent.change(screen.getByPlaceholderText(/Enter schedule name/i), { target: { value: "Test Schedule" } });
+    fireEvent.change(screen.getByPlaceholderText(/Enter task instructions/i), { target: { value: "Test instructions" } });
+    
+    // Save the form
+    fireEvent.click(screen.getByText(/Save Schedule/i));
+    
+    // Verify taskInteraction is included with default value "wait" and inactivityDelay with default value "10"
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        taskInteraction: "wait",
+        inactivityDelay: "10"
+      })
+    );
+  });
+
+  it("shows inactivityDelay field when taskInteraction is 'wait'", () => {
+    render(
+      <ScheduleForm
+        isEditing={false}
+        availableModes={availableModes}
+        onSave={jest.fn()}
+        onCancel={jest.fn()}
+      />
+    );
+    
+    // By default, taskInteraction is "wait", so inactivityDelay field should be visible
+    expect(screen.getByLabelText(/Inactivity delay in minutes/i)).toBeInTheDocument();
+    
+    // Change taskInteraction to "interrupt"
+    fireEvent.click(screen.getByText(/Run after specified inactivity/i));
+    const interruptOption = screen.getByText(/Interrupt current task/i);
+    fireEvent.click(interruptOption);
+    
+    // inactivityDelay field should not be visible
+    expect(screen.queryByLabelText(/Inactivity delay \(minutes\)/i)).not.toBeInTheDocument();
+  });
+
+  it("includes inactivityDelay in form data when taskInteraction is 'wait'", () => {
+    const onSave = jest.fn();
+    render(
+      <ScheduleForm
+        isEditing={false}
+        availableModes={availableModes}
+        onSave={onSave}
+        onCancel={jest.fn()}
+      />
+    );
+    
+    // Fill required fields
+    fireEvent.change(screen.getByPlaceholderText(/Enter schedule name/i), { target: { value: "Test Schedule" } });
+    fireEvent.change(screen.getByPlaceholderText(/Enter task instructions/i), { target: { value: "Test instructions" } });
+    
+    // Change inactivityDelay
+    const inactivityDelayInput = screen.getByLabelText(/Inactivity delay in minutes/i);
+    fireEvent.change(inactivityDelayInput, { target: { value: "10" } });
+    
+    // Save the form
+    fireEvent.click(screen.getByText(/Save Schedule/i));
+    
+    // Verify inactivityDelay is included with the updated value
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        taskInteraction: "wait",
+        inactivityDelay: "10"
+      })
+    );
   });
 });

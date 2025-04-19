@@ -89,6 +89,9 @@ const ScheduleListItem: React.FC<ScheduleListItemProps> = ({ schedule, onEdit, o
           <CardTitle className="text-vscode-foreground">{schedule.name}</CardTitle>
           <CardDescription>
             Mode: {schedule.modeDisplayName || schedule.mode} • Type: {schedule.scheduleType === "time" ? "Time Schedule" : "After Task Completion"}
+            {schedule.taskInteraction && (
+              <> • Task Interaction: {schedule.taskInteraction === "wait" ? "Run after inactivity" : schedule.taskInteraction === "interrupt" ? "Interrupt" : "Skip"}</>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent className="pb-2">

@@ -24,6 +24,7 @@ interface Schedule {
   expirationMinute?: string;
   requireActivity?: boolean;
   active?: boolean; // If undefined, treat as true (backward compatibility)
+  taskInteraction?: "wait" | "interrupt" | "skip"; // How to handle when a task is already running
   createdAt: string;
   updatedAt: string;
   lastExecutionTime?: string;
@@ -111,10 +112,26 @@ export class SchedulerService {
   }
 
   public async initialize(): Promise<void> {
-    console.log('Initializing scheduler service');
-    await this.loadSchedules();
-    this.setupTimers();
-  }
+     console.log('Initializing scheduler service!');
+     setTimeout(async () => {
+     try {
+       const lastActivityTime = await RooService.getLastActivityTimeForActiveTask();
+       this.log(
+         `RooService.getLastActivityTimeForActiveTask() called in initialize. Result: ${
+           lastActivityTime !== undefined ? lastActivityTime : "undefined"
+         }`
+       );
+     } catch (err) {
+       this.log(
+         `Error calling RooService.getLastActivityTimeForActiveTask() in initialize: ${
+           err instanceof Error ? err.message : String(err)
+         }`
+       );
+     }
+    }, 10000);
+     await this.loadSchedules();
+     this.setupTimers();
+   }
 
   private async loadSchedules(): Promise<void> {
     try {
@@ -314,6 +331,35 @@ private async executeSchedule(schedule: Schedule): Promise<void> {
   }
 
   try {
+    // Check if there's an active task and handle according to taskInteraction setting
+    const hasActiveTask = await RooService.hasActiveTask();
+    if (hasActiveTask) {
+      // Default to "wait" if not specified
+      const taskInteraction = schedule.taskInteraction || "wait";
+      
+      switch (taskInteraction) {
+        case "wait":
+          this.log(`Task already running. Schedule "${schedule.name}" will run after specified inactivity.`);
+          // Set up a short timer to check again in 1 minute
+          const timer = setTimeout(() => {
+            this.executeSchedule(schedule);
+          }, 60000); // 1 minute
+          this.timers.set(schedule.id, timer);
+          return;
+          
+        case "interrupt":
+          this.log(`Task already running. Schedule "${schedule.name}" will interrupt the current task.`);
+          await RooService.interruptActiveTask();
+          break;
+          
+        case "skip":
+          this.log(`Task already running. Schedule "${schedule.name}" execution skipped.`);
+          // Set up the next timer
+          this.setupTimerForSchedule(schedule);
+          return;
+      }
+    }
+
     // Process the task and get the task ID
     const taskId = await this.processTask(schedule.mode, schedule.taskInstructions);
 

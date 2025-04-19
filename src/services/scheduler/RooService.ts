@@ -64,17 +64,23 @@ export class RooService {
 
     // Get the current task stack and configuration
     const taskStack = api.getCurrentTaskStack();
+    console.log('taskStack', taskStack);
     if (!taskStack || taskStack.length === 0) {
       return undefined;
     }
     const activeTaskId = taskStack[taskStack.length - 1];
     const config = api.getConfiguration();
     const taskHistory = config.taskHistory;
+    console.log('taskHistory', taskHistory);
     if (!taskHistory || !Array.isArray(taskHistory)) {
       return undefined;
     }
-    const activeTaskEntry = taskHistory.find((entry: any) => entry.id === activeTaskId);
-    return activeTaskEntry?.ts;
+    // Find the last entry for the active task (most recent message)
+    const activeTaskEntries = taskHistory.filter((entry: any) => entry.id === activeTaskId);
+    if (!activeTaskEntries.length) {
+      return undefined;
+    }
+    return activeTaskEntries[activeTaskEntries.length - 1].ts;
   }
 
   /**
@@ -89,5 +95,32 @@ export class RooService {
     }
     const now = Date.now();
     return now - lastActivityTime <= durationMs;
+  }
+
+  /**
+   * Checks if there is an active task running.
+   * @returns Promise<boolean> - true if there is an active task, otherwise false.
+   */
+  public static async hasActiveTask(): Promise<boolean> {
+    const api = RooService.getRooClineApi();
+    const taskStack = api.getCurrentTaskStack();
+    return !!taskStack && taskStack.length > 0;
+  }
+
+  /**
+   * Interrupts the current active task, if any.
+   * @returns Promise<boolean> - true if a task was interrupted, false if no active task.
+   */
+  public static async interruptActiveTask(): Promise<boolean> {
+    const api = RooService.getRooClineApi();
+    const taskStack = api.getCurrentTaskStack();
+    
+    if (!taskStack || taskStack.length === 0) {
+      return false;
+    }
+    
+    // Cancel the current task
+    await api.cancelCurrentTask();
+    return true;
   }
 }

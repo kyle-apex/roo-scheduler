@@ -16,6 +16,8 @@ export interface Schedule {
   expirationMinute?: string;
   requireActivity?: boolean;
   active?: boolean; // If undefined, treat as true (backward compatibility)
+  taskInteraction?: "wait" | "interrupt" | "skip"; // How to handle when a task is already running
+  inactivityDelay?: string; // Number of minutes of inactivity to wait before executing when taskInteraction is "wait"
   createdAt: string;
   updatedAt: string;
   lastExecutionTime?: string;

@@ -1,5 +1,5 @@
 import React from "react"
-import { render, screen, fireEvent } from "@testing-library/react"
+import { render, screen, fireEvent, cleanup } from "@testing-library/react"
 import ScheduleListItem from "../components/scheduler/ScheduleListItem"
 import { Schedule } from "../components/scheduler/types"
 
@@ -13,6 +13,7 @@ const mockSchedule: Schedule = {
   timeUnit: "minute",
   selectedDays: { monday: true, tuesday: false, wednesday: false, thursday: false, friday: false, saturday: false, sunday: false },
   taskInstructions: "Do something important.",
+  taskInteraction: "wait",
   createdAt: "2023-01-01T00:00:00.000Z",
   updatedAt: "2023-01-01T00:00:00.000Z",
 }
@@ -121,6 +122,51 @@ it("renders the last execution time if present", () => {
   // The formatted date string should appear
   const formatted = new Date(lastExecutionTime).toLocaleString();
   expect(screen.getByText(new RegExp(`Last executed: ${formatted}`))).toBeInTheDocument();
+});
+
+it("displays the taskInteraction value in the card description", () => {
+  const onEdit = jest.fn();
+  const onDelete = jest.fn();
+  const onToggleActive = jest.fn();
+  
+  // Test with "wait" value
+  render(
+    <ScheduleListItem
+      schedule={{ ...mockSchedule, taskInteraction: "wait" }}
+      onEdit={onEdit}
+      onDelete={onDelete}
+      onToggleActive={onToggleActive}
+    />
+  );
+  expect(screen.getByText(/Task Interaction: Run after inactivity/i)).toBeInTheDocument();
+  
+  // Cleanup
+  cleanup();
+  
+  // Test with "interrupt" value
+  render(
+    <ScheduleListItem
+      schedule={{ ...mockSchedule, taskInteraction: "interrupt" }}
+      onEdit={onEdit}
+      onDelete={onDelete}
+      onToggleActive={onToggleActive}
+    />
+  );
+  expect(screen.getByText(/Task Interaction: Interrupt/i)).toBeInTheDocument();
+  
+  // Cleanup
+  cleanup();
+  
+  // Test with "skip" value
+  render(
+    <ScheduleListItem
+      schedule={{ ...mockSchedule, taskInteraction: "skip" }}
+      onEdit={onEdit}
+      onDelete={onDelete}
+      onToggleActive={onToggleActive}
+    />
+  );
+  expect(screen.getByText(/Task Interaction: Skip/i)).toBeInTheDocument();
 });
 
 })

@@ -19,7 +19,7 @@ import { CodeActionProvider } from "./core/CodeActionProvider"
 import { migrateSettings } from "./utils/migrateSettings"
 import { formatLanguage } from "./shared/language"
 import { ClineProvider } from "./core/webview/ClineProvider"
-
+import { RooService } from "./services/scheduler/RooService"
 /**
  * Built using https://github.com/microsoft/vscode-webview-ui-toolkit
  *
@@ -52,7 +52,6 @@ export async function activate(context: vscode.ExtensionContext) {
 	const schedulerService = SchedulerService.getInstance(context)
 	await schedulerService.initialize()
 	outputChannel.appendLine("Scheduler service initialized")
-
 
 	// Initialize i18n for internationalization support
 	initializeI18n(context.globalState.get("language") ?? formatLanguage(vscode.env.language))

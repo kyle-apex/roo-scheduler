@@ -9,10 +9,12 @@ jest.mock("vscode", () => ({
 
 const mockGetCurrentTaskStack = jest.fn();
 const mockGetConfiguration = jest.fn();
+const mockCancelCurrentTask = jest.fn();
 
 const mockApi = {
   getCurrentTaskStack: mockGetCurrentTaskStack,
   getConfiguration: mockGetConfiguration,
+  cancelCurrentTask: mockCancelCurrentTask,
 };
 
 const mockExtension = {
@@ -88,6 +90,64 @@ describe("RooService.getLastActivityTimeForActiveTask", () => {
     await expect(RooService.getLastActivityTimeForActiveTask()).rejects.toThrow(
       "Roo Cline API is not available"
     );
+  });
+});
+
+describe("RooService.hasActiveTask", () => {
+  const vscode = require("vscode");
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    vscode.extensions.getExtension.mockReturnValue(mockExtension);
+  });
+
+  it("returns true if there is an active task", async () => {
+    mockGetCurrentTaskStack.mockReturnValue(["task-1"]);
+    const result = await RooService.hasActiveTask();
+    expect(result).toBe(true);
+  });
+
+  it("returns false if there is no active task", async () => {
+    mockGetCurrentTaskStack.mockReturnValue([]);
+    const result = await RooService.hasActiveTask();
+    expect(result).toBe(false);
+  });
+
+  it("returns false if task stack is undefined", async () => {
+    mockGetCurrentTaskStack.mockReturnValue(undefined);
+    const result = await RooService.hasActiveTask();
+    expect(result).toBe(false);
+  });
+});
+
+describe("RooService.interruptActiveTask", () => {
+  const vscode = require("vscode");
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    vscode.extensions.getExtension.mockReturnValue(mockExtension);
+    mockCancelCurrentTask.mockResolvedValue(undefined);
+  });
+
+  it("cancels the current task and returns true if there is an active task", async () => {
+    mockGetCurrentTaskStack.mockReturnValue(["task-1"]);
+    const result = await RooService.interruptActiveTask();
+    expect(result).toBe(true);
+    expect(mockCancelCurrentTask).toHaveBeenCalled();
+  });
+
+  it("returns false without canceling if there is no active task", async () => {
+    mockGetCurrentTaskStack.mockReturnValue([]);
+    const result = await RooService.interruptActiveTask();
+    expect(result).toBe(false);
+    expect(mockCancelCurrentTask).not.toHaveBeenCalled();
+  });
+
+  it("returns false without canceling if task stack is undefined", async () => {
+    mockGetCurrentTaskStack.mockReturnValue(undefined);
+    const result = await RooService.interruptActiveTask();
+    expect(result).toBe(false);
+    expect(mockCancelCurrentTask).not.toHaveBeenCalled();
   });
 });
 

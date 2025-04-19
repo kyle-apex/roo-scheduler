@@ -58,6 +58,7 @@ const getDefinedForm = (initialData?: Partial<ScheduleFormData>): RequiredSchedu
   taskInteraction: initialData?.taskInteraction ?? "wait",
   inactivityDelay: initialData?.inactivityDelay ?? "10", // Default to 10 minutes
   lastExecutionTime: initialData?.lastExecutionTime ?? "",
+  lastSkipTime: initialData?.lastSkipTime ?? "",
   lastTaskId: initialData?.lastTaskId ?? ""
 });
 

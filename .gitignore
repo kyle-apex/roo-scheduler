@@ -4,6 +4,8 @@ out
 out-*
 node_modules
 coverage/
+.roomodes
+system-prompt-*
 
 .DS_Store
 

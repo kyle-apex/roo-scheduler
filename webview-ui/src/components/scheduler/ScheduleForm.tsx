@@ -9,6 +9,7 @@ import { Schedule } from "./types"
 import LabeledInput from "./LabeledInput"
 import TimeInput from "./TimeInput"
 import DaySelector from "./DaySelector"
+import DateTimeSelector from "./DateTimeSelector"
 
 export type ScheduleFormData = Omit<Schedule, 'id' | 'createdAt' | 'updatedAt' | 'modeDisplayName'>;
 
@@ -250,52 +251,32 @@ const ScheduleForm = forwardRef<ScheduleFormHandle, ScheduleFormProps>(
               </div>
               <DaySelector selectedDays={form.selectedDays} toggleDay={toggleDay} />
             </div>
-            <div className="flex flex-col gap-2">
-              <label className="text-vscode-descriptionForeground text-sm">Start Time</label>
-              <div className="flex items-center gap-2">
-                <Input
-                  type="date"
-                  className="w-40"
-                  value={form.startDate}
-                  onChange={e => setField("startDate", e.target.value)}
-                  aria-label="Start date"
-                />
-                <TimeInput
-                  hour={form.startHour}
-                  minute={form.startMinute}
-                  setHour={v => setField("startHour", v)}
-                  setMinute={v => setField("startMinute", v)}
-                  hourAria="Start hour"
-                  minuteAria="Start minute"
-                />
-              </div>
-            </div>
-            <div className="flex flex-col gap-2">
-              <label className="text-vscode-descriptionForeground text-sm">Expires</label>
-              <div className="flex items-center gap-2">
-                <Input
-                  type="date"
-                  className="w-40"
-                  value={form.expirationDate}
-                  min={form.startDate}
-                  onChange={e => setField("expirationDate", e.target.value)}
-                  aria-label="Expiration date"
-                />
-                <TimeInput
-                  hour={form.expirationHour}
-                  minute={form.expirationMinute}
-                  setHour={v => setField("expirationHour", v)}
-                  setMinute={v => setField("expirationMinute", v)}
-                  hourAria="Expiration hour"
-                  minuteAria="Expiration minute"
-                />
-              </div>
-              {!validateExpirationTime() && (
-                <p className="text-red-500 text-xs mt-1">
-                  Expiration time must be after start time
-                </p>
-              )}
-            </div>
+            <DateTimeSelector
+              label="Start Time"
+              date={form.startDate}
+              hour={form.startHour}
+              minute={form.startMinute}
+              setDate={v => setField("startDate", v)}
+              setHour={v => setField("startHour", v)}
+              setMinute={v => setField("startMinute", v)}
+              dateAriaLabel="Start date"
+              hourAriaLabel="Start hour"
+              minuteAriaLabel="Start minute"
+            />
+            <DateTimeSelector
+              label="Expires"
+              date={form.expirationDate}
+              hour={form.expirationHour}
+              minute={form.expirationMinute}
+              setDate={v => setField("expirationDate", v)}
+              setHour={v => setField("expirationHour", v)}
+              setMinute={v => setField("expirationMinute", v)}
+              minDate={form.startDate}
+              errorMessage={!validateExpirationTime() ? "Expiration time must be after start time" : undefined}
+              dateAriaLabel="Expiration date"
+              hourAriaLabel="Expiration hour"
+              minuteAriaLabel="Expiration minute"
+            />
             <div className="flex items-center gap-2 mt-2">
               <div
                 className="flex items-center cursor-pointer"

@@ -3,8 +3,8 @@
 	"displayName": "Roo Scheduler",
 	"description": "A whole dev team of AI agents in your editor.",
 	"publisher": "kyle-apex",
-	"version": "3.11.11",
-	"icon": "assets/icons/icon.png",
+	"version": "0.0.1",
+	"icon": "assets/icons/scheduler-icon.svg",
 	"galleryBanner": {
 		"color": "#617A91",
 		"theme": "dark"
@@ -169,7 +169,7 @@
 		"publish:marketplace": "vsce publish && ovsx publish",
 		"publish": "npm run build && changeset publish && npm install --package-lock-only",
 		"version-packages": "changeset version && npm install --package-lock-only",
-		"vscode:prepublish": "npm run package",
+		"vscode:prepublish": "npm run build:webview && npm run build:esbuild",
 		"vsix": "rimraf bin && mkdirp bin && npx vsce package --out bin",
 		"watch": "npm-run-all -l -p watch:*",
 		"watch:esbuild": "node esbuild.js --watch",

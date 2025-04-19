@@ -1,26 +1,11 @@
 import posthog from "posthog-js"
-import { TelemetrySetting } from "../../../src/shared/TelemetrySetting"
 
 class TelemetryClient {
 	private static instance: TelemetryClient
 	private static telemetryEnabled: boolean = false
 
-	public updateTelemetryState(telemetrySetting: TelemetrySetting, apiKey?: string, distinctId?: string) {
-		posthog.reset()
-
-		if (telemetrySetting === "enabled" && apiKey && distinctId) {
-			TelemetryClient.telemetryEnabled = true
-
-			posthog.init(apiKey, {
-				api_host: "https://us.i.posthog.com",
-				persistence: "localStorage",
-				loaded: () => posthog.identify(distinctId),
-				capture_pageview: false,
-				capture_pageleave: false,
-			})
-		} else {
-			TelemetryClient.telemetryEnabled = false
-		}
+	public updateTelemetryState(telemetrySetting: any, apiKey?: string, distinctId?: string) {
+		
 	}
 
 	public static getInstance(): TelemetryClient {

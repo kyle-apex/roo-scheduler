@@ -29,6 +29,7 @@ interface Schedule {
   createdAt: string;
   updatedAt: string;
   lastExecutionTime?: string;
+  lastSkippedTime?: string; // Timestamp when execution was last skipped
   lastTaskId?: string; // Roo Cline task ID of the last execution
 }
 
@@ -238,10 +239,30 @@ export class SchedulerService {
     let nextTime: Date;
     const interval = parseInt(schedule.timeInterval);
     
-    if (schedule.lastExecutionTime) {
-      // If we have a last execution time, calculate from that
-      const lastExecution = new Date(schedule.lastExecutionTime);
-      nextTime = new Date(lastExecution);
+    // Determine the most recent reference time (lastExecutionTime, lastSkippedTime, or startDateTime)
+    let referenceTime: Date;
+    let useLastTime = false;
+    
+    if (schedule.lastExecutionTime || schedule.lastSkippedTime) {
+      // Find the most recent of lastExecutionTime and lastSkippedTime
+      const lastExecutionDate = schedule.lastExecutionTime ? new Date(schedule.lastExecutionTime) : new Date(0);
+      const lastSkippedDate = schedule.lastSkippedTime ? new Date(schedule.lastSkippedTime) : new Date(0);
+      
+      // Use the most recent time
+      if (lastExecutionDate.getTime() >= lastSkippedDate.getTime()) {
+        referenceTime = lastExecutionDate;
+      } else {
+        referenceTime = lastSkippedDate;
+      }
+      useLastTime = true;
+    } else {
+      // No previous execution or skip, use start time
+      referenceTime = new Date(startDateTime);
+    }
+    
+    if (useLastTime) {
+      // Calculate from the reference time (last execution or skip)
+      nextTime = new Date(referenceTime);
       
       switch (schedule.timeUnit) {
         case 'minute':
@@ -256,7 +277,7 @@ export class SchedulerService {
       }
     } else {
       // First execution, calculate from start time
-      nextTime = new Date(startDateTime);
+      nextTime = new Date(referenceTime);
       
       // If start time is in the past, calculate the next occurrence
       if (now > nextTime) {
@@ -365,7 +386,7 @@ private async executeSchedule(schedule: Schedule): Promise<void> {
               return;
             }
           } catch (error) {
-            this.log(`Error checking task activity: ${error instanceof Error ? error.message : String(error)}`);
+            console.log(`Error checking task activity: ${error instanceof Error ? error.message : String(error)}`);
             // Set up a short timer to check again in 1 minute
             const timer = setTimeout(() => {
               this.executeSchedule(schedule);
@@ -382,8 +403,13 @@ private async executeSchedule(schedule: Schedule): Promise<void> {
           
         case "skip":
           this.log(`Task already running. Schedule "${schedule.name}" execution skipped.`);
-          // Set up the next timer
-          this.setupTimerForSchedule(schedule);
+          // Update lastSkippedTime and set up the next timer
+          const updatedScheduleWithSkip = await this.updateSchedule(schedule.id, {
+            lastSkippedTime: new Date().toISOString(),
+          });
+          if (updatedScheduleWithSkip) {
+            this.setupTimerForSchedule(updatedScheduleWithSkip);
+          }
           return;
       }
     }

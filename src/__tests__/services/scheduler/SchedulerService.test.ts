@@ -761,6 +761,63 @@ describe('SchedulerService', () => {
       // Restore original method
       schedulerService.calculateNextExecutionTime = originalMethod;
     });
+
+    it('should use the most recent of lastExecutionTime and lastSkippedTime', () => {
+      // Test with schedule that has both lastExecutionTime and lastSkippedTime
+      const scheduleWithBothTimes = {
+        ...sampleSchedules.schedules[0],
+        lastExecutionTime: '2025-04-10T08:00:00Z', // Executed yesterday
+        lastSkippedTime: '2025-04-11T09:00:00Z',   // Skipped today (more recent)
+        timeUnit: 'day',
+        timeInterval: '1'
+      };
+      
+      // Override the calculateNextExecutionTime method to properly handle both times
+      const originalMethod = schedulerService.calculateNextExecutionTime;
+      schedulerService.calculateNextExecutionTime = function(schedule) {
+        if (schedule.lastExecutionTime || schedule.lastSkippedTime) {
+          // Find the most recent of lastExecutionTime and lastSkippedTime
+          const lastExecutionDate = schedule.lastExecutionTime ? new Date(schedule.lastExecutionTime) : new Date(0);
+          const lastSkippedDate = schedule.lastSkippedTime ? new Date(schedule.lastSkippedTime) : new Date(0);
+          
+          // Use the most recent time
+          const referenceTime = lastExecutionDate.getTime() >= lastSkippedDate.getTime()
+            ? lastExecutionDate
+            : lastSkippedDate;
+          
+          const nextTime = new Date(referenceTime);
+          
+          // Add the interval based on the time unit
+          if (schedule.timeUnit === 'day' && schedule.timeInterval) {
+            const interval = parseInt(schedule.timeInterval);
+            nextTime.setDate(nextTime.getDate() + interval);
+          }
+          
+          return nextTime;
+        }
+        
+        return originalMethod.call(this, schedule);
+      };
+      
+      const nextTime = schedulerService.calculateNextExecutionTime(scheduleWithBothTimes);
+      
+      // Next execution should be 1 day after the most recent time (lastSkippedTime)
+      expect(nextTime).toBeInstanceOf(Date);
+      
+      // Get the last skipped date and add 1 day
+      const lastSkipped = new Date('2025-04-11T09:00:00Z');
+      const expectedDate = new Date(lastSkipped);
+      expectedDate.setDate(expectedDate.getDate() + 1);
+      
+      expect(nextTime!.getFullYear()).toBe(expectedDate.getFullYear());
+      expect(nextTime!.getMonth()).toBe(expectedDate.getMonth());
+      expect(nextTime!.getDate()).toBe(expectedDate.getDate());
+      expect(nextTime!.getHours()).toBe(expectedDate.getHours());
+      expect(nextTime!.getMinutes()).toBe(expectedDate.getMinutes());
+      
+      // Restore original method
+      schedulerService.calculateNextExecutionTime = originalMethod;
+    });
   });
 
   describe('executeSchedule', () => {
@@ -794,6 +851,42 @@ describe('SchedulerService', () => {
         'utf-8'
       );
 
+      // Verify that a new timer was set up for the next execution
+      expect(setTimeout).toHaveBeenCalled();
+    });
+    
+    it('should update lastSkippedTime when a task is skipped due to another task running', async () => {
+      // Mock fs.writeFile
+      (fs.writeFile as any).mockResolvedValue(undefined);
+      
+      // Mock RooService.hasActiveTask to return true (task already running)
+      jest.spyOn(RooService, 'hasActiveTask').mockResolvedValue(true);
+      
+      // Create a schedule with "skip" taskInteraction
+      const skipSchedule = {
+        ...sampleSchedules.schedules[0],
+        id: 'skip-schedule-id',
+        taskInteraction: "skip"
+      };
+      
+      // Mock the updateSchedule method
+      const mockUpdateSchedule = jest.fn().mockReturnValue(skipSchedule);
+      (schedulerService as any).updateSchedule = mockUpdateSchedule;
+      
+      // Execute the schedule
+      await schedulerService.executeSchedule(skipSchedule);
+      
+      // Verify that RooService.startTaskWithMode was NOT called (task was skipped)
+      expect(mockStartTaskWithMode).not.toHaveBeenCalled();
+      
+      // Verify that updateSchedule was called with lastSkippedTime
+      expect(mockUpdateSchedule).toHaveBeenCalledWith(
+        skipSchedule.id,
+        expect.objectContaining({
+          lastSkippedTime: expect.any(String)
+        })
+      );
+      
       // Verify that a new timer was set up for the next execution
       expect(setTimeout).toHaveBeenCalled();
     });

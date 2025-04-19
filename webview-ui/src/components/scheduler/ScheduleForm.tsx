@@ -59,7 +59,8 @@ const getDefinedForm = (initialData?: Partial<ScheduleFormData>): RequiredSchedu
   inactivityDelay: initialData?.inactivityDelay ?? "10", // Default to 10 minutes
   lastExecutionTime: initialData?.lastExecutionTime ?? "",
   lastSkippedTime: initialData?.lastSkippedTime ?? "",
-  lastTaskId: initialData?.lastTaskId ?? ""
+  lastTaskId: initialData?.lastTaskId ?? "",
+  nextExecutionTime: initialData?.nextExecutionTime ?? ""
 });
 
 const ScheduleForm = forwardRef<ScheduleFormHandle, ScheduleFormProps>(

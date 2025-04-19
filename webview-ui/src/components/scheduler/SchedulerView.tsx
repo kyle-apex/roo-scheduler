@@ -80,6 +80,13 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 					console.error("Failed to parse schedules from file content message:", e);
 				}
 			}
+			
+			// Listen for schedulesUpdated message from extension
+			// This will be triggered when the .roo/schedules.json file is updated externally
+			if (message.type === "schedulesUpdated") {
+				console.log("Received schedulesUpdated message, reloading schedules");
+				loadSchedules();
+			}
 		};
 		
 		// Add the event listener
@@ -236,7 +243,8 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 				inactivityDelay: schedule.inactivityDelay,
 				lastExecutionTime: schedule.lastExecutionTime,
 				lastSkippedTime: schedule.lastSkippedTime,
-				lastTaskId: schedule.lastTaskId
+				lastTaskId: schedule.lastTaskId,
+				nextExecutionTime: schedule.nextExecutionTime
 			})
 			
 			setIsEditing(true)
@@ -502,6 +510,35 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 												    ) : (
 												      new Date(schedule.lastExecutionTime).toLocaleString()
 												    )}
+												  </div>
+												)}
+												
+												{schedule.active !== false && schedule.scheduleType === "time" && (
+												  <div className="mt-1 text-xs text-vscode-descriptionForeground flex items-center">
+												    {false && <span className="codicon codicon-clock mr-1"></span>}
+												    Next execution: &nbsp;{(() => {
+												      // Use stored nextExecutionTime if available, otherwise calculate it
+												      const nextTime = schedule.nextExecutionTime
+												        ? new Date(schedule.nextExecutionTime)
+												        : null;
+												        
+												      if (!nextTime) {
+												        return <span className="italic">Not scheduled</span>;
+												      }
+												      
+												      const now = new Date();
+												      const timeDiff = nextTime.getTime() - now.getTime();
+												      const isUpcomingSoon = timeDiff <= 60 * 60 * 1000; // Within the next hour
+												      
+												      return (
+												        <span className={`${isUpcomingSoon ? 'text-vscode-notificationsInfoIcon font-medium' : 'text-vscode-foreground'}`}>
+												          {nextTime.toLocaleString()}
+												          {isUpcomingSoon && (
+												            <span className="ml-1 text-vscode-notificationsInfoIcon">(soon)</span>
+												          )}
+												        </span>
+												      );
+												    })()}
 												  </div>
 												)}
 											</div>

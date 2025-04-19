@@ -23,4 +23,5 @@ export interface Schedule {
   lastExecutionTime?: string;
   lastSkippedTime?: string;
   lastTaskId?: string;
+  nextExecutionTime?: string; // ISO string of the next calculated execution time
 }

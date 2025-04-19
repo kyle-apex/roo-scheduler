@@ -31,6 +31,7 @@ interface Schedule {
   lastExecutionTime?: string;
   lastSkippedTime?: string; // Timestamp when execution was last skipped
   lastTaskId?: string; // Roo Cline task ID of the last execution
+  nextExecutionTime?: string; // ISO string of the next calculated execution time
 }
 
 interface SchedulesFile {
@@ -193,6 +194,15 @@ export class SchedulerService {
       if (!nextExecutionTime) {
         this.log(`Schedule "${schedule.name}" has no valid execution time or has expired`);
         return;
+      }
+
+      // Save the next execution time if it's different from the current value
+      const nextExecutionTimeStr = nextExecutionTime.toISOString();
+      if (schedule.nextExecutionTime !== nextExecutionTimeStr) {
+        this.updateSchedule(schedule.id, { nextExecutionTime: nextExecutionTimeStr });
+        
+        // Notify the webview that schedules have been updated
+        //this.notifyWebviewSchedulesUpdated();
       }
 
       const delay = nextExecutionTime.getTime() - Date.now();

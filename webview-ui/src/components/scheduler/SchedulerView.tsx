@@ -453,9 +453,9 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 													</div>
 												</div>
 												
-												<div className="text-sm text-vscode-descriptionForeground mt-1">
+												{false && <div className="text-sm text-vscode-descriptionForeground mt-1">
 													Mode: {schedule.modeDisplayName || schedule.mode} • Type: {schedule.scheduleType === "time" ? "Time Schedule" : "After Task Completion"}
-												</div>
+												</div>}
 												
 												<div
 													className="text-sm text-vscode-descriptionForeground mt-2"
@@ -466,7 +466,7 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 														WebkitBoxOrient: "vertical"
 													}}
 												>
-													{schedule.taskInstructions}
+													<span className="font-bold">{schedule.modeDisplayName || schedule.mode}: </span>{schedule.taskInstructions}
 												</div>
 												
 												{schedule.scheduleType === "time" && (

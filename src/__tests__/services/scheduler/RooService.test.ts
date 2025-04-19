@@ -5,6 +5,9 @@ jest.mock("vscode", () => ({
   extensions: {
     getExtension: jest.fn(),
   },
+  commands: {
+    executeCommand: jest.fn(),
+  },
 }));
 
 const mockGetCurrentTaskStack = jest.fn();
@@ -200,5 +203,51 @@ describe("RooService.isActiveTaskWithinDuration", () => {
     global.Date.now = () => 2000;
     const result = await RooService.isActiveTaskWithinDuration(1500);
     expect(result).toBe(false);
+  });
+});
+
+describe("RooService.resumeTask", () => {
+  const vscode = require("vscode");
+  const mockResumeTask = jest.fn();
+  const mockExecuteCommand = jest.fn();
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    vscode.commands.executeCommand = mockExecuteCommand;
+    vscode.extensions.getExtension.mockReturnValue({
+      isActive: true,
+      exports: {
+        ...mockApi,
+        resumeTask: mockResumeTask
+      }
+    });
+  });
+
+  it("opens the Roo Cline extension and resumes the task", async () => {
+    mockResumeTask.mockResolvedValue(undefined);
+    mockExecuteCommand.mockResolvedValue(undefined);
+
+    await RooService.resumeTask("task-123");
+    
+    expect(mockExecuteCommand).toHaveBeenCalledWith("workbench.view.extension.roo-cline-ActivityBar");
+    expect(mockResumeTask).toHaveBeenCalledWith("task-123");
+  });
+
+  it("throws an error if taskId is not provided", async () => {
+    await expect(RooService.resumeTask("")).rejects.toThrow("Task ID is required to resume a task");
+  });
+
+  it("throws if the extension is not active", async () => {
+    vscode.extensions.getExtension.mockReturnValue({ isActive: false });
+    await expect(RooService.resumeTask("task-123")).rejects.toThrow(
+      "Roo Cline extension is not activated"
+    );
+  });
+
+  it("throws if the API is not available", async () => {
+    vscode.extensions.getExtension.mockReturnValue({ isActive: true, exports: undefined });
+    await expect(RooService.resumeTask("task-123")).rejects.toThrow(
+      "Roo Cline API is not available"
+    );
   });
 });

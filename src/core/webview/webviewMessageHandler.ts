@@ -227,9 +227,8 @@ export const webviewMessageHandler = async (provider: any, message: WebviewMessa
 			openImage(message.text!)
 			break
 		case "openFile":
-			// Special handling for schedules.json file to ensure it's properly saved
-			console.log('here')
-			if (message.text === "./.roo/schedules.json" && message.values?.content) {
+			// Special handling for schedules.json file
+			if (message.text === "./.roo/schedules.json") {
 				try {
 					// Get workspace root
 					const workspaceRoot = getWorkspacePath()
@@ -241,22 +240,59 @@ export const webviewMessageHandler = async (provider: any, message: WebviewMessa
 					const fullPath = path.join(workspaceRoot, ".roo", "schedules.json")
 					const uri = vscode.Uri.file(fullPath)
 					
-					// Ensure the .roo directory exists
-					const rooDir = path.join(workspaceRoot, ".roo")
-					await vscode.workspace.fs.createDirectory(vscode.Uri.file(rooDir))
-					
-					// Write the file content
-					console.log(`Writing to schedules.jsonA: ${message.values.content}`)
-					await vscode.workspace.fs.writeFile(uri, Buffer.from(message.values.content, "utf8"))
-					
-					// Only open the file if explicitly requested (not for silent saves)
-					if (message.values.open) {
-						const document = await vscode.workspace.openTextDocument(uri)
-						await vscode.window.showTextDocument(document, { preview: false })
+					// If this is a write operation (has content)
+					if (message.values?.content) {
+						// Ensure the .roo directory exists
+						const rooDir = path.join(workspaceRoot, ".roo")
+						await vscode.workspace.fs.createDirectory(vscode.Uri.file(rooDir))
+						
+						// Write the file content
+						console.log(`Writing to schedules.json: ${message.values.content}`)
+						await vscode.workspace.fs.writeFile(uri, Buffer.from(message.values.content, "utf8"))
+						
+						// Only open the file if explicitly requested (not for silent saves)
+						if (message.values.open) {
+							const document = await vscode.workspace.openTextDocument(uri)
+							await vscode.window.showTextDocument(document, { preview: false })
+						}
+					}
+					// If this is a read operation (no content)
+					else {
+						try {
+							// Check if file exists
+							const fileExists = await fileExistsAtPath(fullPath)
+							
+							if (fileExists) {
+								// Read the file content
+								const fileContent = await fs.readFile(fullPath, 'utf-8')
+								
+								// Send the content back to the webview
+								provider.postMessageToWebview({
+									type: "fileContent",
+									path: message.text,
+									content: fileContent
+								})
+							} else {
+								// File doesn't exist, send empty content
+								provider.postMessageToWebview({
+									type: "fileContent",
+									path: message.text,
+									content: JSON.stringify({ schedules: [] })
+								})
+							}
+						} catch (readError) {
+							console.error(`Error reading schedules.json: ${readError}`)
+							// Send empty content on error
+							provider.postMessageToWebview({
+								type: "fileContent",
+								path: message.text,
+								content: JSON.stringify({ schedules: [] })
+							})
+						}
 					}
 				} catch (error) {
-					console.error(`Error saving schedules.json: ${error}`)
-					vscode.window.showErrorMessage(`Could not save schedules.json: ${error instanceof Error ? error.message : String(error)}`)
+					console.error(`Error handling schedules.json: ${error}`)
+					vscode.window.showErrorMessage(`Could not handle schedules.json: ${error instanceof Error ? error.message : String(error)}`)
 				}
 			} else {
 				// Default behavior for other files
@@ -831,15 +867,38 @@ export const webviewMessageHandler = async (provider: any, message: WebviewMessa
 				})
 			}
 			break
+case "humanRelayCancel":
+	if (message.requestId) {
+		vscode.commands.executeCommand("roo-scheduler.handleHumanRelayResponse", {
+			requestId: message.requestId,
+			cancelled: true,
+		})
+	}
+	break
 
-		case "humanRelayCancel":
-			if (message.requestId) {
-				vscode.commands.executeCommand("roo-scheduler.handleHumanRelayResponse", {
-					requestId: message.requestId,
-					cancelled: true,
-				})
-			}
-			break
+case "resumeTask":
+	if (message.taskId) {
+		try {
+			console.log(`Attempting to resume task with ID: ${message.taskId}`);
+			const { RooService } = await import("../../services/scheduler/RooService");
+			
+			// First, try to open the Roo Cline extension directly
+			console.log("Opening Roo Cline extension...");
+			await vscode.commands.executeCommand("workbench.view.extension.roo-cline-ActivityBar");
+			
+			// Then resume the task
+			console.log("Resuming task...");
+			await RooService.resumeTask(message.taskId);
+			console.log("Task resume completed successfully");
+		} catch (error) {
+			console.error("Failed to resume task:", error);
+			vscode.window.showErrorMessage(`Failed to resume task: ${error instanceof Error ? error.message : String(error)}`);
+		}
+	} else {
+		console.error("No taskId provided for resumeTask message");
+		vscode.window.showErrorMessage("Cannot resume task: No task ID provided");
+	}
+	break
 
 		
 	}

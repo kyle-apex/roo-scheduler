@@ -121,6 +121,7 @@ export interface WebviewMessage {
 		| "maxReadFileLine"
 		| "searchFiles"
 		| "toggleApiConfigPin"
+		| "resumeTask"
 	text?: string
 	disabled?: boolean
 	askResponse?: ClineAskResponse
@@ -148,6 +149,7 @@ export interface WebviewMessage {
 	ids?: string[]
 	scheduleId?: string
 	active?: boolean
+	taskId?: string
 }
 
 export const checkoutDiffPayloadSchema = z.object({

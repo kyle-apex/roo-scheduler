@@ -58,7 +58,7 @@
 			"activitybar": [
 				{
 					"id": "roo-scheduler-ActivityBar",
-					"title": "Roo Scheduler!",
+					"title": "Roo Scheduler",
 					"icon": "assets/icons/icon.svg"
 				}
 			]

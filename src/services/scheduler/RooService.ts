@@ -123,4 +123,63 @@ export class RooService {
     await api.cancelCurrentTask();
     return true;
   }
+  
+  /**
+   * Resumes a task with the given ID and opens the Roo Cline extension.
+   * @param taskId The ID of the task to resume.
+   * @returns Promise<void>
+   * @throws Error if the task is not found in the task history or the Roo Cline extension is not available.
+   */
+  public static async resumeTask(taskId: string): Promise<void> {
+    console.log(`RooService.resumeTask called with taskId: ${taskId}`);
+    
+    if (!taskId) {
+      console.error("Task ID is empty or undefined");
+      throw new Error("Task ID is required to resume a task");
+    }
+  
+    console.log("Getting Roo Cline API...");
+    const api = RooService.getRooClineApi();
+    console.log("Roo Cline API obtained successfully");
+    
+    try {
+      // First, check if the task exists in history
+      console.log("Checking if task exists in history...");
+      const exists = await api.isTaskInHistory(taskId);
+      if (!exists) {
+        console.error(`Task with ID ${taskId} not found in history`);
+        throw new Error(`Task with ID ${taskId} not found in history`);
+      }
+      console.log(`Task with ID ${taskId} found in history`);
+      
+      // Try different approaches to open the Roo Cline extension
+      try {
+        // First try the direct command
+        console.log("Opening Roo Cline extension via direct command...");
+        await vscode.commands.executeCommand("workbench.view.extension.roo-cline-ActivityBar");
+      } catch (cmdError) {
+        console.error("Error opening Roo Cline extension via direct command:", cmdError);
+        
+        // Try the registered command in our extension
+        try {
+          console.log("Opening Roo Cline extension via our registered command...");
+          await vscode.commands.executeCommand("roo-scheduler.openRooClineExtension");
+        } catch (regCmdError) {
+          console.error("Error opening Roo Cline extension via registered command:", regCmdError);
+          // Continue anyway, as the resumeTask might still work
+        }
+      }
+      
+      // Resume the task
+      console.log(`Resuming task with ID: ${taskId}...`);
+      await api.resumeTask(taskId);
+      console.log("Task resumed successfully");
+      
+      // Show a notification to the user
+      vscode.window.showInformationMessage(`Task ${taskId} resumed successfully`);
+    } catch (error) {
+      console.error("Error in resumeTask:", error);
+      throw error;
+    }
+  }
 }

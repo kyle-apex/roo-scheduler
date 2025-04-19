@@ -58,31 +58,87 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 	// Load schedules from file
 	useEffect(() => {
 		loadSchedules()
+		
+		// Set up event listener for file content messages
+		const handleMessage = (event: MessageEvent) => {
+			const message = event.data;
+			
+			// Check if this is a response with file content
+			if (message.type === "fileContent" && message.path === "./.roo/schedules.json") {
+				try {
+					const data = JSON.parse(message.content);
+					if (data && Array.isArray(data.schedules)) {
+						console.log("Received schedules from file:", data.schedules);
+						setSchedules(data.schedules);
+						
+						// Also update localStorage for backup
+						try {
+							localStorage.setItem('roo-schedules', JSON.stringify(data.schedules));
+						} catch (e) {
+							console.error("Failed to save schedules to localStorage:", e);
+						}
+					}
+				} catch (e) {
+					console.error("Failed to parse schedules from file content message:", e);
+				}
+			}
+		};
+		
+		// Add the event listener
+		window.addEventListener('message', handleMessage);
+		
+		// Clean up the event listener when component unmounts
+		return () => {
+			window.removeEventListener('message', handleMessage);
+		};
 	}, [])
 	
 	// Load schedules from .roo/schedules.json
 	const loadSchedules = async () => {
 		try {
-			// Read the schedules.json file content
-			// For now, we'll try to read from localStorage as a fallback
-			const savedSchedules = localStorage.getItem('roo-schedules')
+			console.log("Requesting schedules from extension")
+			
+			// Request the schedules file content from the extension
+			vscode.postMessage({
+				type: "openFile",
+				text: "./.roo/schedules.json",
+				values: { open: false }
+			})
+			
+			// Set a timeout to fall back to localStorage if no response is received
+			setTimeout(() => {
+				console.log("Timeout waiting for file content, trying localStorage");
+				tryLoadFromLocalStorage();
+			}, 2000);
+			
+		} catch (error) {
+			console.error("Failed to load schedules:", error);
+			tryLoadFromLocalStorage();
+		}
+	}
+	
+	// Fallback to load from localStorage
+	const tryLoadFromLocalStorage = () => {
+		try {
+			const savedSchedules = localStorage.getItem('roo-schedules');
 			if (savedSchedules) {
 				try {
-					const parsedSchedules = JSON.parse(savedSchedules)
+					const parsedSchedules = JSON.parse(savedSchedules);
 					if (Array.isArray(parsedSchedules)) {
-						console.log("Loaded schedules from localStorage:", parsedSchedules)
-						setSchedules(parsedSchedules)
+						console.log("Loaded schedules from localStorage:", parsedSchedules);
+						setSchedules(parsedSchedules);
 					}
 				} catch (e) {
-					console.error("Failed to parse schedules from localStorage:", e)
+					console.error("Failed to parse schedules from localStorage:", e);
+					setSchedules([]);
 				}
 			} else {
-				console.log("No schedules found in localStorage")
-				setSchedules([])
+				console.log("No schedules found in localStorage");
+				setSchedules([]);
 			}
 		} catch (error) {
-			console.error("Failed to load schedules:", error)
-			setSchedules([])
+			console.error("Failed to load from localStorage:", error);
+			setSchedules([]);
 		}
 	}
 	
@@ -179,7 +235,9 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 				expirationMinute: schedule.expirationMinute,
 				requireActivity: schedule.requireActivity,
 				taskInteraction: schedule.taskInteraction,
-				inactivityDelay: schedule.inactivityDelay
+				inactivityDelay: schedule.inactivityDelay,
+				lastExecutionTime: schedule.lastExecutionTime,
+				lastTaskId: schedule.lastTaskId
 			})
 			
 			setIsEditing(true)
@@ -211,6 +269,9 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 		
 		// Update state
 		setSchedules(updatedSchedules)
+		
+		// Notify backend to reload schedules and reschedule timers
+		notifySchedulesUpdated();
 		
 		// If we were editing this schedule, reset the form
 		if (selectedScheduleId === scheduleId) {
@@ -345,6 +406,9 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 																});
 																
 																setSchedules(updatedSchedules);
+																
+																// Notify backend to reload schedules and reschedule timers
+																notifySchedulesUpdated();
 															}}
 															aria-label={schedule.active === false ? "Activate schedule" : "Deactivate schedule"}
 														>
@@ -415,9 +479,31 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 												)}
 												
 												{schedule.lastExecutionTime && (
-													<div className="mt-1 text-xs text-vscode-descriptionForeground">
-														Last executed: {new Date(schedule.lastExecutionTime).toLocaleString()}
-													</div>
+												  <div className="mt-1 text-xs text-vscode-descriptionForeground">
+												    Last executed: {schedule.lastTaskId ? (
+												      <button
+												        className="inline-flex items-center px-1 py-0.5 rounded hover:bg-vscode-button-hoverBackground text-vscode-linkForeground hover:underline cursor-pointer"
+												        onClick={(e) => {
+												          e.stopPropagation();
+												          console.log(`Clicked on last execution time for schedule: ${schedule.id}`);
+												          console.log(`Last task ID: ${schedule.lastTaskId}`);
+												          
+												          // Send message to extension to resume the task
+												          console.log("Sending resumeTask message to extension");
+												          vscode.postMessage({
+												            type: "resumeTask",
+												            taskId: schedule.lastTaskId
+												          });
+												          console.log("resumeTask message sent");
+												        }}
+												        title="Click to view/resume this task in Roo Code"
+												      >
+												        {new Date(schedule.lastExecutionTime).toLocaleString()}
+												      </button>
+												    ) : (
+												      new Date(schedule.lastExecutionTime).toLocaleString()
+												    )}
+												  </div>
 												)}
 											</div>
 										</div>

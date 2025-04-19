@@ -240,8 +240,15 @@ class MockSchedulerService {
       // Process the task
       await this.processTask(schedule.mode, schedule.taskInstructions);
       
-      // Update last execution time
-      const updatedSchedule = { ...schedule, lastExecutionTime: new Date().toISOString() };
+      // Process the task and get the task ID
+      const taskId = await this.processTask(schedule.mode, schedule.taskInstructions);
+      
+      // Update last execution time and last task ID
+      const updatedSchedule = {
+        ...schedule,
+        lastExecutionTime: new Date().toISOString(),
+        lastTaskId: taskId
+      };
       this.schedules = this.schedules.map(s => s.id === schedule.id ? updatedSchedule : s);
       await this.saveSchedules();
       
@@ -254,7 +261,7 @@ class MockSchedulerService {
     }
   }
 
-  public async processTask(mode: string, taskInstructions: string): Promise<void> {
+  public async processTask(mode: string, taskInstructions: string): Promise<string> {
     try {
       // Validate the mode
       const modeConfig = getModeBySlug(mode);
@@ -265,6 +272,9 @@ class MockSchedulerService {
       // Get the current configuration
 
       this.log(`Successfully started task with mode "${mode}"`);
+      
+      // Return a mock task ID
+      return `mock-task-${Date.now()}`;
     } catch (error) {
       this.log(`Error processing task: ${error instanceof Error ? error.message : String(error)}`);
       throw error;

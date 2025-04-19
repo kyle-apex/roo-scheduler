@@ -109,10 +109,10 @@ describe("ScheduleForm", () => {
     const modeLabel = screen.getByText(/^Mode$/i).closest("label");
     expect(modeLabel).toHaveTextContent("*");
     expect(modeLabel?.querySelector(".text-red-500")).not.toBeNull();
-    // Instructions
-    const instructionsLabel = screen.getByText(/^Instructions$/i).closest("label");
-    expect(instructionsLabel).toHaveTextContent("*");
-    expect(instructionsLabel?.querySelector(".text-red-500")).not.toBeNull();
+    // Prompt (formerly Instructions)
+    const promptLabel = screen.getByText(/^Prompt$/i).closest("label");
+    expect(promptLabel).toHaveTextContent("*");
+    expect(promptLabel?.querySelector(".text-red-500")).not.toBeNull();
     // Every (Time Interval)
     const everyLabel = screen.getByText(/^Every$/i).closest("label");
     expect(everyLabel).toHaveTextContent("*");
@@ -148,7 +148,7 @@ describe("ScheduleForm", () => {
     expect(screen.getByText(/Create New Schedule/i)).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/Enter schedule name/i)).toBeInTheDocument();
     expect(screen.getByText(/Mode/i)).toBeInTheDocument();
-    expect(screen.getByText(/Instructions/i)).toBeInTheDocument();
+    expect(screen.getByText(/Prompt/i)).toBeInTheDocument();
     expect(screen.getByText(/Schedule Type/i)).toBeInTheDocument();
     expect(screen.getByText(/Days of the week/i)).toBeInTheDocument();
     expect(screen.getByText(/Start Time/i)).toBeInTheDocument();

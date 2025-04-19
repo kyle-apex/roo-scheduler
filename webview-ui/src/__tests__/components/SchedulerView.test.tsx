@@ -168,6 +168,8 @@ describe("SchedulerView", () => {
       createdAt: "2025-04-18T10:00:00.000Z",
       updatedAt: "2025-04-18T10:00:00.000Z",
       active: true,
+      taskInteraction: "wait",
+      inactivityDelay: "15",
     };
 
     beforeEach(() => {
@@ -183,6 +185,24 @@ describe("SchedulerView", () => {
       expect(await screen.findByTestId("header-save-button")).toBeInTheDocument();
       // The name field should be pre-filled
       expect(screen.getByDisplayValue("My Schedule")).toBeInTheDocument();
+    });
+
+    it("populates form fields with correct values when editing a schedule", async () => {
+      renderWithProvider();
+      const editButton = await screen.findByTestId("edit-schedule-button");
+      fireEvent.click(editButton);
+      
+      // Verify that form fields are populated with the correct values
+      expect(screen.getByDisplayValue("My Schedule")).toBeInTheDocument(); // Name
+      expect(screen.getByDisplayValue("Do something important")).toBeInTheDocument(); // Task instructions
+      
+      // Verify that the inactivity delay field is populated with the correct value
+      // First, make sure the taskInteraction is set to "wait" so the field is visible
+      expect(screen.getByText("Run after specified inactivity")).toBeInTheDocument();
+      
+      // Then check the inactivity delay value
+      const inactivityDelayInput = screen.getByLabelText(/Inactivity delay in minutes/i);
+      expect(inactivityDelayInput).toHaveValue(15);
     });
 
     it("enters edit mode when Edit button is clicked, and does not double-trigger", async () => {

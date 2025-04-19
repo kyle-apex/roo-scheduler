@@ -29,10 +29,35 @@ export const webviewMessageHandler = async (provider: any, message: WebviewMessa
 
 	switch (message.type) {
 		case "schedulesUpdated": {
+			console.log('schedulesUpdated command received');
 			try {
 				const { SchedulerService } = await import("../../services/scheduler/SchedulerService");
 				const schedulerService = SchedulerService.getInstance(provider.contextProxy.extensionContext);
 				await schedulerService.reloadSchedulesAndReschedule();
+				
+				// Get workspace root
+				const workspaceRoot = getWorkspacePath();
+				if (workspaceRoot) {
+					// Resolve the full path to schedules.json
+					const schedulesFilePath = path.join(workspaceRoot, ".roo", "schedules.json");
+					
+					try {
+						// Read the current schedules file content
+						const fileExists = await fileExistsAtPath(schedulesFilePath);
+						if (fileExists) {
+							const fileContent = await fs.readFile(schedulesFilePath, 'utf-8');
+							
+							// Post the content back to the webview
+							provider.postMessageToWebview({
+								type: "fileContent",
+								path: "./.roo/schedules.json",
+								content: fileContent
+							});
+						}
+					} catch (readError) {
+						console.error(`Error reading schedules.json: ${readError}`);
+					}
+				}
 			} catch (error) {
 				console.log("Failed to reload schedules and reschedule in extension:", error);
 			}
@@ -249,6 +274,12 @@ export const webviewMessageHandler = async (provider: any, message: WebviewMessa
 						// Write the file content
 						console.log(`Writing to schedules.json: ${message.values.content}`)
 						await vscode.workspace.fs.writeFile(uri, Buffer.from(message.values.content, "utf8"))
+
+						provider.postMessageToWebview({
+							type: "fileContent",
+							path: message.text,
+							content: message.values.content
+						})
 						
 						// Only open the file if explicitly requested (not for silent saves)
 						if (message.values.open) {

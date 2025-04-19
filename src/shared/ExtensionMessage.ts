@@ -68,6 +68,7 @@ export interface ExtensionMessage {
 		| "maxReadFileLine"
 		| "fileSearchResults"
 		| "toggleApiConfigPin"
+		| "schedulesUpdated"
 	text?: string
 	action?:
 		| "chatButtonClicked"

@@ -1,6 +1,9 @@
 import * as vscode from "vscode"
 import * as dotenvx from "@dotenvx/dotenvx"
 import * as path from "path"
+import * as fs from "fs/promises"
+import { getWorkspacePath } from "./utils/path"
+import { fileExistsAtPath } from "./utils/fs"
 
 // Load environment variables from .env file
 try {
@@ -76,6 +79,16 @@ export async function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(
 		vscode.commands.registerCommand("roo-scheduler.openRooClineExtension", async () => {
 			await vscode.commands.executeCommand("workbench.view.extension.roo-cline-ActivityBar")
+		})
+	)
+
+	// Register command to handle schedule updates and notify the webview
+	context.subscriptions.push(
+		vscode.commands.registerCommand("roo-scheduler.schedulesUpdated", async () => {
+			// This command is called when schedules are updated
+			// Simply trigger a state refresh which will cause the webview to reload its data
+			console.log("Schedules updated sending message to webview")
+			await provider.postMessageToWebview({type:'schedulesUpdated'});
 		})
 	)
 

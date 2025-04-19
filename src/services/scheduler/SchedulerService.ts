@@ -101,12 +101,21 @@ export class SchedulerService {
    * Update a schedule by id with the given updates and persist the change.
    * Returns the updated schedule, or undefined if not found.
    */
-  private async updateSchedule(scheduleId: string, updates: Partial<Schedule>): Promise<Schedule | undefined> {
+  public async updateSchedule(scheduleId: string, updates: Partial<Schedule>): Promise<Schedule | undefined> {
     const scheduleIndex = this.schedules.findIndex(s => s.id === scheduleId);
     if (scheduleIndex === -1) return undefined;
     const updatedSchedule = { ...this.schedules[scheduleIndex], ...updates };
     this.schedules[scheduleIndex] = updatedSchedule;
     await this.saveSchedules();
+    
+    // Notify that schedules have been updated by triggering a command
+    // This will cause the webview to refresh its data
+    try {
+      await vscode.commands.executeCommand('roo-scheduler.schedulesUpdated');
+    } catch (error) {
+      this.log(`Error notifying webview of schedule update: ${error instanceof Error ? error.message : String(error)}`);
+    }
+    
     return updatedSchedule;
   }
 
@@ -202,7 +211,7 @@ export class SchedulerService {
         this.updateSchedule(schedule.id, { nextExecutionTime: nextExecutionTimeStr });
         
         // Notify the webview that schedules have been updated
-        //this.notifyWebviewSchedulesUpdated();
+        
       }
 
       const delay = nextExecutionTime.getTime() - Date.now();

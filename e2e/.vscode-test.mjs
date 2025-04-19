@@ -14,6 +14,7 @@ export default defineConfig({
 	},
 	launchArgs: [
 		'--enable-proposed-api=RooVeterinaryInc.roo-cline',
-		'--disable-extensions'
+		// Don't disable all extensions, as we need the Roo-cline extension to be available
+		'--disable-extension=ms-vscode.vscode-typescript-next'
 	]
 });

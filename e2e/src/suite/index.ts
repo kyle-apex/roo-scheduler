@@ -3,51 +3,65 @@ import Mocha from "mocha"
 import { glob } from "glob"
 import * as vscode from "vscode"
 
-import type { RooCodeAPI } from "../../../src/exports/roo-code"
-
-import { waitFor } from "./utils"
-
-declare global {
-	var api: RooCodeAPI
-}
-
 export async function run() {
-	const extension = vscode.extensions.getExtension<RooCodeAPI>("RooVeterinaryInc.roo-cline")
+	console.log("Starting Roo Scheduler extension tests");
 
-	if (!extension) {
-		throw new Error("Extension not found")
+	// Ensure the scheduler extension is active
+	const schedulerExtension = vscode.extensions.getExtension("kyle-apex.roo-scheduler");
+	if (!schedulerExtension) {
+		throw new Error("Scheduler extension not found");
 	}
 
-	const api = extension.isActive ? extension.exports : await extension.activate()
+	if (!schedulerExtension.isActive) {
+		console.log("Activating Scheduler extension...");
+		await schedulerExtension.activate();
+	}
+	console.log("Scheduler extension is active");
 
-	await api.setConfiguration({
-		apiProvider: "openrouter" as const,
-		openRouterApiKey: process.env.OPENROUTER_API_KEY!,
-		openRouterModelId: "google/gemini-2.0-flash-001",
-		openRouterModelInfo: {
-			maxTokens: 8192,
-			contextWindow: 1000000,
-			supportsImages: true,
-			supportsPromptCache: false,
-			inputPrice: 0.1,
-			outputPrice: 0.4,
-			thinking: false,
-		},
-	})
+	// Check if Roo-cline extension is available
+	const rooClineExtension = vscode.extensions.getExtension("rooveterinaryinc.roo-cline");
+	if (rooClineExtension) {
+		console.log("Roo-cline extension found");
+		if (!rooClineExtension.isActive) {
+			try {
+				console.log("Activating Roo-cline extension...");
+				await rooClineExtension.activate();
+				console.log("Roo-cline extension activated successfully");
+			} catch (error) {
+				console.log("Failed to activate Roo-cline extension:", error instanceof Error ? error.message : String(error));
+				console.log("Some tests may be skipped");
+			}
+		} else {
+			console.log("Roo-cline extension is already active");
+		}
+	} else {
+		console.log("Roo-cline extension not found. Some tests may be skipped.");
+	}
 
-	await vscode.commands.executeCommand("roo-scheduler.SidebarProvider.focus")
-	await waitFor(() => api.isReady())
-
-	// Expose the API to the tests.
-	globalThis.api = api
+	// Focus the scheduler sidebar view if available
+	try {
+		await vscode.commands.executeCommand("roo-scheduler.SidebarProvider.focus");
+		console.log("Focused Scheduler sidebar view");
+	} catch (error) {
+		console.log("Failed to focus Scheduler sidebar view:", error instanceof Error ? error.message : String(error));
+	}
 
 	// Add all the tests to the runner.
-	const mocha = new Mocha({ ui: "tdd", timeout: 300_000 })
-	const cwd = path.resolve(__dirname, "..")
-	;(await glob("**/**.test.js", { cwd })).forEach((testFile) => mocha.addFile(path.resolve(cwd, testFile)))
+	const mocha = new Mocha({ ui: "tdd", timeout: 300_000 });
+	const cwd = path.resolve(__dirname, "..");
+	const testFiles = await glob("**/**.test.js", { cwd });
+	console.log(`Found ${testFiles.length} test files`);
+	
+	testFiles.forEach((testFile) => {
+		console.log(`Adding test file: ${testFile}`);
+		mocha.addFile(path.resolve(cwd, testFile));
+	});
 
-	// Let's go!
+	// Run the tests
 	return new Promise<void>((resolve, reject) =>
-		mocha.run((failures) => (failures === 0 ? resolve() : reject(new Error(`${failures} tests failed.`)))),
-	)
+		mocha.run((failures) => {
+			console.log(`Tests completed with ${failures} failures`);
+			failures === 0 ? resolve() : reject(new Error(`${failures} tests failed.`));
+		})
+	);
 }

@@ -177,7 +177,9 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 				expirationDate: schedule.expirationDate,
 				expirationHour: schedule.expirationHour,
 				expirationMinute: schedule.expirationMinute,
-				requireActivity: schedule.requireActivity
+				requireActivity: schedule.requireActivity,
+				taskInteraction: schedule.taskInteraction,
+				inactivityDelay: schedule.inactivityDelay
 			})
 			
 			setIsEditing(true)

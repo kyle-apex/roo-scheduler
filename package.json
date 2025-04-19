@@ -2,7 +2,7 @@
 	"name": "roo-scheduler",
 	"displayName": "Roo Scheduler",
 	"description": "A whole dev team of AI agents in your editor.",
-	"publisher": "RooVeterinaryInc",
+	"publisher": "kyle-apex",
 	"version": "3.11.11",
 	"icon": "assets/icons/icon.png",
 	"galleryBanner": {
@@ -18,9 +18,9 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/RooVetGit/Roo-Scheduler"
+		"url": "https://github.com/kyle-apex/roo-scheduler"
 	},
-	"homepage": "https://github.com/RooVetGit/Roo-Scheduler",
+	"homepage": "https://github.com/kyle-apex/roo-scheduler",
 	"categories": [
 		"AI",
 		"Chat",
@@ -162,7 +162,9 @@
 		"test": "node scripts/run-tests.js",
 		"test:extension": "jest",
 		"test:webview": "cd webview-ui && npm run test",
-		"test:rooservice": "npm run vscode-test && cd e2e && npx @vscode/test-cli --config rooservice-test.mjs",
+		"test:e2e": "npm run vscode-test && cd e2e && npm run test",
+		"test:rooservice": "npm run vscode-test && cd e2e && npm run test:rooservice",
+		"test:e2e:all": "npm run vscode-test && cd e2e && npm run test:all",
 		"prepare": "husky",
 		"publish:marketplace": "vsce publish && ovsx publish",
 		"publish": "npm run build && changeset publish && npm install --package-lock-only",

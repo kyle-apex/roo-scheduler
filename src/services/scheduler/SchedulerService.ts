@@ -25,6 +25,7 @@ interface Schedule {
   requireActivity?: boolean;
   active?: boolean; // If undefined, treat as true (backward compatibility)
   taskInteraction?: "wait" | "interrupt" | "skip"; // How to handle when a task is already running
+  inactivityDelay?: string; // Number of minutes of inactivity to wait before executing when taskInteraction is "wait"
   createdAt: string;
   updatedAt: string;
   lastExecutionTime?: string;
@@ -339,13 +340,40 @@ private async executeSchedule(schedule: Schedule): Promise<void> {
       
       switch (taskInteraction) {
         case "wait":
-          this.log(`Task already running. Schedule "${schedule.name}" will run after specified inactivity.`);
-          // Set up a short timer to check again in 1 minute
-          const timer = setTimeout(() => {
-            this.executeSchedule(schedule);
-          }, 60000); // 1 minute
-          this.timers.set(schedule.id, timer);
-          return;
+          // Parse inactivityDelay from minutes to milliseconds, default to 1 minute if not set
+          const inactivityDelayMinutes = schedule.inactivityDelay ? parseInt(schedule.inactivityDelay) : 1;
+          const inactivityDelayMs = inactivityDelayMinutes * 60 * 1000;
+          
+          // Check if the active task has been inactive for the specified delay
+          try {
+            const lastActivityTime = await RooService.getLastActivityTimeForActiveTask();
+            const now = Date.now();
+            
+            if (lastActivityTime && (now - lastActivityTime) >= inactivityDelayMs) {
+              // Task has been inactive for the specified delay, proceed with execution
+              this.log(`Task has been inactive for ${inactivityDelayMinutes} minute(s). Proceeding with schedule "${schedule.name}".`);
+              // Interrupt the inactive task
+              await RooService.interruptActiveTask();
+            } else {
+              // Task is still active or hasn't been inactive long enough
+              this.log(`Task is still active or hasn't been inactive for ${inactivityDelayMinutes} minute(s). Schedule "${schedule.name}" will check again in 1 minute.`);
+              // Set up a short timer to check again in 1 minute
+              const timer = setTimeout(() => {
+                this.executeSchedule(schedule);
+              }, 60000); // 1 minute
+              this.timers.set(schedule.id, timer);
+              return;
+            }
+          } catch (error) {
+            this.log(`Error checking task activity: ${error instanceof Error ? error.message : String(error)}`);
+            // Set up a short timer to check again in 1 minute
+            const timer = setTimeout(() => {
+              this.executeSchedule(schedule);
+            }, 60000); // 1 minute
+            this.timers.set(schedule.id, timer);
+            return;
+          }
+          break;
           
         case "interrupt":
           this.log(`Task already running. Schedule "${schedule.name}" will interrupt the current task.`);

@@ -183,7 +183,7 @@ const ScheduleForm = forwardRef<ScheduleFormHandle, ScheduleFormProps>(
           </div>
           <div className="flex flex-col gap-2">
             <label className="text-vscode-descriptionForeground text-sm">
-              Instructions
+              Prompt
               <span className="text-red-500 ml-0.5">*</span>
             </label>
             <AutosizeTextarea

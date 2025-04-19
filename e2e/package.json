@@ -5,9 +5,12 @@
 	"scripts": {
 		"lint": "eslint src --ext ts",
 		"check-types": "tsc --noEmit",
-		"test": "npm run build && npx dotenvx run -f .env.local -- node ./out/runTest.js",
-		"ci": "npm run vscode-test && npm run test",
+		"test": "npm run build && node ./out/e2e/src/runTest.js",
+		"test:rooservice": "npm run build && npx @vscode/test-cli --config rooservice-test.mjs",
+		"test:all": "npm run test && npm run test:rooservice",
+		"ci": "npm run vscode-test && npm run test:all",
 		"build": "rimraf out && tsc -p tsconfig.json",
+		"clean": "rimraf out",
 		"vscode-test": "cd .. && npm run vscode-test"
 	},
 	"dependencies": {},
@@ -15,7 +18,9 @@
 		"@types/mocha": "^10.0.10",
 		"@vscode/test-cli": "^0.0.9",
 		"@vscode/test-electron": "^2.4.0",
+		"glob": "^10.3.10",
 		"mocha": "^11.1.0",
+		"rimraf": "^5.0.5",
 		"typescript": "^5.4.5"
 	}
 }

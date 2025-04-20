@@ -112,7 +112,7 @@ const ScheduleForm = forwardRef<ScheduleFormHandle, ScheduleFormProps>(
 
 
   useEffect(() => {
-    if (hasStartDate && !isEditing && !initialData?.startDate) {
+    if (!isEditing && !initialData?.startDate) {
       const now = new Date();
       const currentHour = now.getHours();
       

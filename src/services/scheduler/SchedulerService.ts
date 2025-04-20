@@ -231,13 +231,13 @@ export class SchedulerService {
   }
     
   private calculateNextExecutionTime(schedule: Schedule): Date | null {
-    if (!schedule.timeInterval || !schedule.timeUnit || !schedule.startDate) {
+    if (!schedule.timeInterval || !schedule.timeUnit) {
       return null;
     }
 
     const now = new Date();
     const startDateTime = new Date(
-      `${schedule.startDate}T${schedule.startHour || '00'}:${schedule.startMinute || '00'}:00`
+      `${schedule.startDate || new Date().toISOString().split('T')[0]}T${schedule.startHour || '00'}:${schedule.startMinute || '00'}:00`
     );
     // Check if schedule has expired
     if (schedule.expirationDate) {

@@ -10,6 +10,7 @@ import LabeledInput from "./LabeledInput"
 import TimeInput from "./TimeInput"
 import DaySelector from "./DaySelector"
 import DateTimeSelector from "./DateTimeSelector"
+import Checkbox from "../../components/ui/Checkbox"
 
 export type ScheduleFormData = Omit<Schedule, 'id' | 'createdAt' | 'updatedAt' | 'modeDisplayName'>;
 
@@ -334,36 +335,13 @@ const ScheduleForm = forwardRef<ScheduleFormHandle, ScheduleFormProps>(
               </Select>
             </div>
             <div className="flex flex-col gap-2 mt-2 p-3 bg-vscode-editor-background border border-vscode-panel-border rounded">
-              <div
-                className="flex items-center cursor-pointer"
-                onClick={() => setHasDaysOfWeek(!hasDaysOfWeek)}
-              >
-                <div className={`w-4 h-4 border rounded-xs flex items-center justify-center mr-2 ${
-                  hasDaysOfWeek
-                    ? "bg-vscode-button-background border-vscode-button-background"
-                    : "border-vscode-input-border"
-                }`}>
-                  {hasDaysOfWeek && (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="10"
-                      height="10"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="text-vscode-button-foreground"
-                    >
-                      <polyline points="20 6 9 17 4 12"></polyline>
-                    </svg>
-                  )}
-                </div>
-                <label className="text-vscode-descriptionForeground text-sm cursor-pointer">
-                  Runs on certain days of the week?
-                </label>
-              </div>
+              <Checkbox
+                checked={hasDaysOfWeek}
+                onChange={setHasDaysOfWeek}
+                label="Runs on certain days of the week?"
+                aria-label="Runs on certain days of the week"
+                className="mb-0"
+              />
               
               {hasDaysOfWeek && (
                 <>
@@ -380,36 +358,13 @@ const ScheduleForm = forwardRef<ScheduleFormHandle, ScheduleFormProps>(
               )}
             </div>
             <div className="flex flex-col gap-2 mt-2 p-3 bg-vscode-editor-background border border-vscode-panel-border rounded">
-              <div
-                className="flex items-center cursor-pointer"
-                onClick={() => setHasStartDate(!hasStartDate)}
-              >
-                <div className={`w-4 h-4 border rounded-xs flex items-center justify-center mr-2 ${
-                  hasStartDate
-                    ? "bg-vscode-button-background border-vscode-button-background"
-                    : "border-vscode-input-border"
-                }`}>
-                  {hasStartDate && (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="10"
-                      height="10"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="text-vscode-button-foreground"
-                    >
-                      <polyline points="20 6 9 17 4 12"></polyline>
-                    </svg>
-                  )}
-                </div>
-                <label className="text-vscode-descriptionForeground text-sm cursor-pointer">
-                  Has a specified start date?
-                </label>
-              </div>
+              <Checkbox
+                checked={hasStartDate}
+                onChange={setHasStartDate}
+                label="Has a specified start date?"
+                aria-label="Has a specified start date"
+                className="mb-0"
+              />
               
               {hasStartDate && (
                 <DateTimeSelector
@@ -427,54 +382,27 @@ const ScheduleForm = forwardRef<ScheduleFormHandle, ScheduleFormProps>(
               )}
             </div>
             <div className="flex flex-col gap-2 mt-2 p-3 bg-vscode-editor-background border border-vscode-panel-border rounded">
-              <div
-                className="flex items-center cursor-pointer"
-                onClick={() => {
-                  const newHasExpiration = !hasExpiration;
+              <Checkbox
+                checked={hasExpiration}
+                onChange={(newHasExpiration) => {
                   setHasExpiration(newHasExpiration);
-                  
                   // If enabling expiration and we have a start date, ensure expiration date is set properly
                   if (newHasExpiration && form.startDate) {
                     const startDate = new Date(form.startDate);
                     const nextDay = new Date(startDate);
                     nextDay.setDate(startDate.getDate() + 1);
-                    
                     // Format date in local time zone (YYYY-MM-DD)
                     const year = nextDay.getFullYear();
                     const month = (nextDay.getMonth() + 1).toString().padStart(2, '0');
                     const day = nextDay.getDate().toString().padStart(2, '0');
                     const nextDayFormatted = `${year}-${month}-${day}`;
-                    
                     setField("expirationDate", nextDayFormatted);
                   }
                 }}
-              >
-                <div className={`w-4 h-4 border rounded-xs flex items-center justify-center mr-2 ${
-                  hasExpiration
-                    ? "bg-vscode-button-background border-vscode-button-background"
-                    : "border-vscode-input-border"
-                }`}>
-                  {hasExpiration && (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="10"
-                      height="10"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="text-vscode-button-foreground"
-                    >
-                      <polyline points="20 6 9 17 4 12"></polyline>
-                    </svg>
-                  )}
-                </div>
-                <label className="text-vscode-descriptionForeground text-sm cursor-pointer">
-                  Has an expiration date?
-                </label>
-              </div>
+                label="Has an expiration date?"
+                aria-label="Has an expiration date"
+                className="mb-0"
+              />
               
               {hasExpiration && (
                 <DateTimeSelector
@@ -494,36 +422,13 @@ const ScheduleForm = forwardRef<ScheduleFormHandle, ScheduleFormProps>(
               )}
             </div>
             <div className="flex flex-col gap-2 mt-2 p-3 bg-vscode-editor-background border border-vscode-panel-border rounded">
-              <div
-                className="flex items-center cursor-pointer"
-                onClick={() => setField("requireActivity", !form.requireActivity)}
-              >
-                <div className={`w-4 h-4 border rounded-xs flex items-center justify-center mr-2 ${
-                  form.requireActivity
-                    ? "bg-vscode-button-background border-vscode-button-background"
-                    : "border-vscode-input-border"
-                }`}>
-                  {form.requireActivity && (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="10"
-                      height="10"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="text-vscode-button-foreground"
-                    >
-                      <polyline points="20 6 9 17 4 12"></polyline>
-                    </svg>
-                  )}
-                </div>
-                <label className="text-vscode-descriptionForeground text-sm cursor-pointer">
-                  Only execute if I have task activity since the last execution of this schedule
-                </label>
-              </div>
+              <Checkbox
+                checked={form.requireActivity}
+                onChange={() => setField("requireActivity", !form.requireActivity)}
+                label="Only execute if I have task activity since the last execution of this schedule"
+                aria-label="Only execute if I have task activity since the last execution of this schedule"
+                className="mb-0"
+              />
             </div>
             <div className="flex flex-col gap-2 mt-2">
               <label className="text-vscode-descriptionForeground text-sm">When a task is already running</label>

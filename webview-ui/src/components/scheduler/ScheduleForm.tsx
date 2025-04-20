@@ -521,7 +521,7 @@ const ScheduleForm = forwardRef<ScheduleFormHandle, ScheduleFormProps>(
                   )}
                 </div>
                 <label className="text-vscode-descriptionForeground text-sm cursor-pointer">
-                  Only execute if I had activity since the last execution of this task
+                  Only execute if I have task activity since the last execution of this schedule
                 </label>
               </div>
             </div>

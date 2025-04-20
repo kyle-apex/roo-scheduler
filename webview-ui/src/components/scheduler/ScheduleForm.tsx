@@ -65,13 +65,25 @@ const getDefinedForm = (initialData?: Partial<ScheduleFormData>): RequiredSchedu
 
 const ScheduleForm = forwardRef<ScheduleFormHandle, ScheduleFormProps>(
   ({ initialData, isEditing, availableModes, onSave, onCancel, onValidityChange }, ref) => {
-  // If creating (not editing) and no selectedDays provided, default to all days selected
+  // For new schedules, we'll use defaultDays (all false) as the initial state
+  // For editing, use the provided selectedDays or defaultDays
   const initialFormData = (!isEditing && (!initialData || !initialData.selectedDays))
-    ? { ...initialData, selectedDays: { ...allDaysSelected } }
+    ? { ...initialData, selectedDays: { ...defaultDays } }
     : initialData;
   const [form, setForm] = useState<RequiredScheduleFormData>(getDefinedForm(initialFormData));
   const [hasStartDate, setHasStartDate] = useState<boolean>(!!initialData?.startDate);
   const [hasExpiration, setHasExpiration] = useState<boolean>(!!initialData?.expirationDate);
+  
+  // Determine if any days of the week are not selected (for editing mode)
+  const anyDaysNotSelected = useMemo(() => {
+    if (!form.selectedDays) return false;
+    return Object.values(form.selectedDays).some(selected => !selected);
+  }, [form.selectedDays]);
+  
+  // For new schedules, default to false. For editing, check if any days are not selected
+  const [hasDaysOfWeek, setHasDaysOfWeek] = useState<boolean>(
+    isEditing ? anyDaysNotSelected : false
+  );
 
   // Validation state for parent
   const isValid =
@@ -140,7 +152,7 @@ const ScheduleForm = forwardRef<ScheduleFormHandle, ScheduleFormProps>(
       // Set expiration to one day after start date
       const startDate = new Date(form.startDate);
       const nextDay = new Date(startDate);
-      nextDay.setDate(startDate.getDate() + 1);
+      nextDay.setDate(startDate.getDate() + 2);
       
       // Format date in local time zone (YYYY-MM-DD)
       const year = nextDay.getFullYear();
@@ -177,19 +189,24 @@ const ScheduleForm = forwardRef<ScheduleFormHandle, ScheduleFormProps>(
 
   // Handle changes to hasExpiration state
   useEffect(() => {
-    if (hasExpiration && !form.expirationDate && form.startDate) {
-      // If expiration is enabled but no date is set, default to one day after start date
-      const startDate = new Date(form.startDate);
-      const nextDay = new Date(startDate);
-      nextDay.setDate(startDate.getDate() + 1);
+    if (hasExpiration && form.startDate) {
+      // When expiration is enabled, ensure expiration date is set and is after start date
+      const needsUpdate = !form.expirationDate || new Date(form.expirationDate) <= new Date(form.startDate);
       
-      // Format date in local time zone (YYYY-MM-DD)
-      const year = nextDay.getFullYear();
-      const month = (nextDay.getMonth() + 1).toString().padStart(2, '0');
-      const day = nextDay.getDate().toString().padStart(2, '0');
-      const nextDayFormatted = `${year}-${month}-${day}`;
-      
-      setField("expirationDate", nextDayFormatted);
+      if (needsUpdate) {
+        // Set expiration to one day after start date
+        const startDate = new Date(form.startDate);
+        const nextDay = new Date(startDate);
+        nextDay.setDate(startDate.getDate() + 1);
+        
+        // Format date in local time zone (YYYY-MM-DD)
+        const year = nextDay.getFullYear();
+        const month = (nextDay.getMonth() + 1).toString().padStart(2, '0');
+        const day = nextDay.getDate().toString().padStart(2, '0');
+        const nextDayFormatted = `${year}-${month}-${day}`;
+        
+        setField("expirationDate", nextDayFormatted);
+      }
     }
   }, [hasExpiration, form.expirationDate, form.startDate]);
 
@@ -222,6 +239,14 @@ const ScheduleForm = forwardRef<ScheduleFormHandle, ScheduleFormProps>(
         expirationDate: "",
         expirationHour: "00",
         expirationMinute: "00"
+      };
+    }
+    
+    // If hasDaysOfWeek is false, set all days to be selected
+    if (!hasDaysOfWeek) {
+      formToSave = {
+        ...formToSave,
+        selectedDays: { ...allDaysSelected }
       };
     }
     
@@ -318,18 +343,53 @@ const ScheduleForm = forwardRef<ScheduleFormHandle, ScheduleFormProps>(
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-2">
-                <label className="text-vscode-descriptionForeground text-sm">Days of the week</label>
-                {Object.values(form.selectedDays).filter(Boolean).length > 0 && (
-                  <Badge variant="outline" className="bg-vscode-badge-background text-vscode-badge-foreground">
-                    {Object.values(form.selectedDays).filter(Boolean).length} {Object.values(form.selectedDays).filter(Boolean).length === 1 ? 'day' : 'days'} selected
-                  </Badge>
-                )}
+            <div className="flex flex-col gap-2 mt-2 p-3 bg-vscode-editor-background border border-vscode-panel-border rounded">
+              <div
+                className="flex items-center cursor-pointer"
+                onClick={() => setHasDaysOfWeek(!hasDaysOfWeek)}
+              >
+                <div className={`w-4 h-4 border rounded-xs flex items-center justify-center mr-2 ${
+                  hasDaysOfWeek
+                    ? "bg-vscode-button-background border-vscode-button-background"
+                    : "border-vscode-input-border"
+                }`}>
+                  {hasDaysOfWeek && (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="10"
+                      height="10"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="text-vscode-button-foreground"
+                    >
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                  )}
+                </div>
+                <label className="text-vscode-descriptionForeground text-sm cursor-pointer">
+                  Runs on certain days of the week?
+                </label>
               </div>
-              <DaySelector selectedDays={form.selectedDays} toggleDay={toggleDay} />
+              
+              {hasDaysOfWeek && (
+                <>
+                  <div className="flex items-center gap-2 mt-2">
+                    <label className="text-vscode-descriptionForeground text-sm">Days of the week</label>
+                    {Object.values(form.selectedDays).filter(Boolean).length > 0 && (
+                      <Badge variant="outline" className="bg-vscode-badge-background text-vscode-badge-foreground">
+                        {Object.values(form.selectedDays).filter(Boolean).length} {Object.values(form.selectedDays).filter(Boolean).length === 1 ? 'day' : 'days'} selected
+                      </Badge>
+                    )}
+                  </div>
+                  <DaySelector selectedDays={form.selectedDays} toggleDay={toggleDay} />
+                </>
+              )}
             </div>
-            <div className="flex items-center gap-2 mt-2">
+            <div className="flex flex-col gap-2 mt-2 p-3 bg-vscode-editor-background border border-vscode-panel-border rounded">
               <div
                 className="flex items-center cursor-pointer"
                 onClick={() => setHasStartDate(!hasStartDate)}
@@ -360,26 +420,44 @@ const ScheduleForm = forwardRef<ScheduleFormHandle, ScheduleFormProps>(
                   Has a specified start date?
                 </label>
               </div>
+              
+              {hasStartDate && (
+                <DateTimeSelector
+                  label="Start Time"
+                  date={form.startDate}
+                  hour={form.startHour}
+                  minute={form.startMinute}
+                  setDate={v => setField("startDate", v)}
+                  setHour={v => setField("startHour", v)}
+                  setMinute={v => setField("startMinute", v)}
+                  dateAriaLabel="Start date"
+                  hourAriaLabel="Start hour"
+                  minuteAriaLabel="Start minute"
+                />
+              )}
             </div>
-            
-            {hasStartDate && (
-              <DateTimeSelector
-                label="Start Time"
-                date={form.startDate}
-                hour={form.startHour}
-                minute={form.startMinute}
-                setDate={v => setField("startDate", v)}
-                setHour={v => setField("startHour", v)}
-                setMinute={v => setField("startMinute", v)}
-                dateAriaLabel="Start date"
-                hourAriaLabel="Start hour"
-                minuteAriaLabel="Start minute"
-              />
-            )}
-            <div className="flex items-center gap-2 mt-2">
+            <div className="flex flex-col gap-2 mt-2 p-3 bg-vscode-editor-background border border-vscode-panel-border rounded">
               <div
                 className="flex items-center cursor-pointer"
-                onClick={() => setHasExpiration(!hasExpiration)}
+                onClick={() => {
+                  const newHasExpiration = !hasExpiration;
+                  setHasExpiration(newHasExpiration);
+                  
+                  // If enabling expiration and we have a start date, ensure expiration date is set properly
+                  if (newHasExpiration && form.startDate) {
+                    const startDate = new Date(form.startDate);
+                    const nextDay = new Date(startDate);
+                    nextDay.setDate(startDate.getDate() + 1);
+                    
+                    // Format date in local time zone (YYYY-MM-DD)
+                    const year = nextDay.getFullYear();
+                    const month = (nextDay.getMonth() + 1).toString().padStart(2, '0');
+                    const day = nextDay.getDate().toString().padStart(2, '0');
+                    const nextDayFormatted = `${year}-${month}-${day}`;
+                    
+                    setField("expirationDate", nextDayFormatted);
+                  }
+                }}
               >
                 <div className={`w-4 h-4 border rounded-xs flex items-center justify-center mr-2 ${
                   hasExpiration
@@ -404,28 +482,28 @@ const ScheduleForm = forwardRef<ScheduleFormHandle, ScheduleFormProps>(
                   )}
                 </div>
                 <label className="text-vscode-descriptionForeground text-sm cursor-pointer">
-                  Has expiration?
+                  Has an expiration date?
                 </label>
               </div>
+              
+              {hasExpiration && (
+                <DateTimeSelector
+                  label="Expires"
+                  date={form.expirationDate}
+                  hour={form.expirationHour}
+                  minute={form.expirationMinute}
+                  setDate={v => setField("expirationDate", v)}
+                  setHour={v => setField("expirationHour", v)}
+                  setMinute={v => setField("expirationMinute", v)}
+                  minDate={form.startDate}
+                  errorMessage={!validateExpirationTime() ? "Expiration time must be after start time" : undefined}
+                  dateAriaLabel="Expiration date"
+                  hourAriaLabel="Expiration hour"
+                  minuteAriaLabel="Expiration minute"
+                />
+              )}
             </div>
-            
-            {hasExpiration && (
-              <DateTimeSelector
-                label="Expires"
-                date={form.expirationDate}
-                hour={form.expirationHour}
-                minute={form.expirationMinute}
-                setDate={v => setField("expirationDate", v)}
-                setHour={v => setField("expirationHour", v)}
-                setMinute={v => setField("expirationMinute", v)}
-                minDate={form.startDate}
-                errorMessage={!validateExpirationTime() ? "Expiration time must be after start time" : undefined}
-                dateAriaLabel="Expiration date"
-                hourAriaLabel="Expiration hour"
-                minuteAriaLabel="Expiration minute"
-              />
-            )}
-            <div className="flex items-center gap-2 mt-2">
+            <div className="flex flex-col gap-2 mt-2 p-3 bg-vscode-editor-background border border-vscode-panel-border rounded">
               <div
                 className="flex items-center cursor-pointer"
                 onClick={() => setField("requireActivity", !form.requireActivity)}

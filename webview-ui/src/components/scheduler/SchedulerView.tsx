@@ -16,6 +16,7 @@ import ConfirmationDialog from "../../components/ui/ConfirmationDialog"
 import ScheduleForm from "./ScheduleForm"
 import type { ScheduleFormHandle } from "./ScheduleForm"
 import { Schedule } from "./types"
+import ScheduleSortControl from "./ScheduleSortControl"
 
 // Helper function to format dates without year and seconds
 const formatDateWithoutYearAndSeconds = (dateString: string) => {
@@ -155,7 +156,7 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 			tryLoadFromLocalStorage();
 		}
 	}
-	
+
 	// Fallback to load from localStorage
 	const tryLoadFromLocalStorage = () => {
 		try {
@@ -180,7 +181,7 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 			setSchedules([]);
 		}
 	}
-	
+
 	// Save schedule to file
 	const saveSchedule = (formData: Omit<Schedule, 'id' | 'createdAt' | 'updatedAt' | 'modeDisplayName'>) => {
 		if (!formData.name.trim()) {
@@ -334,73 +335,7 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 	}
 	// Validation is now handled in ScheduleForm
 	
-	// Helper function to get the last execution or skipped time, whichever is more recent
-	const getLastExecutionOrSkippedTime = (schedule: Schedule): string | null => {
-		if (!schedule.lastExecutionTime && !schedule.lastSkippedTime) return null;
-		if (!schedule.lastExecutionTime) return schedule.lastSkippedTime || null;
-		if (!schedule.lastSkippedTime) return schedule.lastExecutionTime || null;
-		
-		// Return the more recent of the two
-		return new Date(schedule.lastExecutionTime).getTime() > new Date(schedule.lastSkippedTime).getTime()
-			? schedule.lastExecutionTime
-			: schedule.lastSkippedTime;
-	};
-	
-	// Sort schedules based on the current sort method and direction
-	const sortedSchedules = useMemo(() => {
-		if (!schedules.length) return [];
-		
-		return [...schedules].sort((a, b) => {
-			// Determine sort direction multiplier (1 for ascending, -1 for descending)
-			const directionMultiplier = sortDirection === "asc" ? 1 : -1;
-			
-			let comparison = 0;
-			
-			switch (sortMethod) {
-				case "nextExecution":
-					// Sort by next execution time
-					if (!a.nextExecutionTime && !b.nextExecutionTime) return 0;
-					if (!a.nextExecutionTime) comparison = 1; // Items without next execution time go to the end
-					else if (!b.nextExecutionTime) comparison = -1;
-					else comparison = new Date(a.nextExecutionTime).getTime() - new Date(b.nextExecutionTime).getTime();
-					break;
-					
-				case "lastExecution":
-					// Sort by last execution or skipped time
-					const aLastTime = getLastExecutionOrSkippedTime(a);
-					const bLastTime = getLastExecutionOrSkippedTime(b);
-					if (!aLastTime && !bLastTime) return 0;
-					if (!aLastTime) comparison = 1;
-					else if (!bLastTime)  comparison = -1;
-					else
-						comparison = new Date(aLastTime).getTime() - new Date(bLastTime).getTime();
-					break;
-					
-				case "lastUpdated":
-					// Sort by last updated time
-					if (!a.updatedAt && !b.updatedAt) return 0;
-					if (!a.updatedAt) comparison = 1;
-					else if (!b.updatedAt) comparison = -1;
-					else
-					comparison = new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
-					break;
-					
-				case "created":
-					// Sort by creation time
-					if (!a.createdAt && !b.createdAt) return 0;
-					if (!a.createdAt) comparison = 1;
-					else if (!b.createdAt) comparison = -1;
-					else comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-					break;
-					
-				default:
-					return 0;
-			}
-			
-			return comparison * directionMultiplier;
-		});
-	}, [schedules, sortMethod, sortDirection]);
-
+	// (Sorting logic and helper moved to ScheduleSortControl)
 
 	return (
 		<Tab>
@@ -443,250 +378,229 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 							</div>
 						) : (
 							<div>
-								{/* Sort controls */}
-								<div className="flex items-center justify-between mb-2 px-2 text-xs text-vscode-descriptionForeground">
-									<div className="flex items-center">
-										<span className="mr-2">Sort by:</span>
-										<select
-											className="bg-vscode-dropdown-background text-vscode-dropdown-foreground border border-vscode-dropdown-border rounded px-2 py-1"
-											value={sortMethod}
-											onChange={(e) => setSortMethod(e.target.value as SortMethod)}
-											title="Select sort method"
-										>
-											<option value="nextExecution">Next Execution</option>
-											<option value="lastExecution">Last Executed</option>
-											<option value="lastUpdated">Last Updated</option>
-											<option value="created">Created</option>
-										</select>
-									</div>
-									
-									<div className="flex items-center">
-										<button
-											className="flex items-center px-2 py-1 rounded hover:bg-vscode-button-hoverBackground"
-											onClick={() => setSortDirection(sortDirection === "asc" ? "desc" : "asc")}
-											title={`Currently sorted ${sortDirection === "asc" ? "ascending" : "descending"}. Click to toggle.`}
-										>
-											<span className="mr-1">
-												{sortDirection === "asc" ? "Ascending" : "Descending"}
-											</span>
-											<span className={`codicon ${sortDirection === "asc" ? "codicon-arrow-up" : "codicon-arrow-down"}`}></span>
-										</button>
-									</div>
-								</div>
-								
-								<Virtuoso
-								style={{
-									height: "400px",
-									overflowY: "auto",
-								}}
-								data={sortedSchedules}
-								data-testid="virtuoso-container"
-								initialTopMostItemIndex={0}
-								components={{
-									List: React.forwardRef((props, ref) => (
-										<div {...props} ref={ref} data-testid="virtuoso-item-list" />
-									)),
-								}}
-								itemContent={(index, schedule) => (
-									<div
-										data-testid={`schedule-item-${schedule.id}`}
-										key={schedule.id}
-										className="cursor-pointer border-b border-vscode-panel-border"
-										onClick={() => editSchedule(schedule.id)}
-									>
-										<div className="flex items-start p-3 gap-2">
-											<div className="flex-1">
-												<div className="flex justify-between items-center">
-													<span className="text-vscode-foreground font-medium">
-														{schedule.name}
-													</span>
-													<div className="flex flex-row gap-1">
-														{/* Active/Inactive Status Indicator */}
-														<Button
-															variant="ghost"
-															size="sm"
-															className={`h-7 px-2 py-0 text-xs font-semibold rounded ${
-																schedule.active === false
-																	? "text-vscode-descriptionForeground"
-																	: "text-green-600"
-															}`}
-															onClick={e => {
-																e.stopPropagation();
-																// Treat undefined as true (so toggle to false)
-																const isActive = schedule.active !== false;
-																// Toggle active state
-																const active = !isActive;
-																
-																// 1. Call backend to toggle schedule active state
-																vscode.postMessage({
-																	type: "toggleScheduleActive",
-																	scheduleId: schedule.id,
-																	active,
-																});
-																
-																// 2. Update local state and storage
-																const updatedSchedules = schedules.map(s =>
-																	s.id === schedule.id ? { ...s, active } : s
-																);
-																
-																try {
-																	localStorage.setItem('roo-schedules', JSON.stringify(updatedSchedules));
-																	console.log("Saved updated schedules to localStorage after toggle active");
-																} catch (e) {
-																	console.error("Failed to save schedules to localStorage after toggle active:", e);
-																}
-																
-																const fileContent = JSON.stringify({ schedules: updatedSchedules }, null, 2);
-																console.log("Saving updated schedules to file after toggle active:", fileContent);
-																
-																vscode.postMessage({
-																	type: "openFile",
-																	text: "./.roo/schedules.json",
-																	values: { create: true, content: fileContent }
-																});
-																
-																setSchedules(updatedSchedules);
-																
-																// Notify backend to reload schedules and reschedule timers
-																notifySchedulesUpdated();
-															}}
-															aria-label={schedule.active === false ? "Activate schedule" : "Deactivate schedule"}
-														>
-															<span className="flex items-center">
-																<span className={`inline-block w-2 h-2 rounded-full mr-1 ${
-																	schedule.active === false ? "bg-vscode-descriptionForeground" : "bg-green-600"
-																}`}></span>
-																{schedule.active === false ? "Inactive" : "Active"}
-															</span>
-														</Button>
-														
-														{/* Edit Button */}
-														<Button
-															variant="ghost"
-															size="sm"
-															className="h-7 w-7 p-0"
-															title="Edit schedule"
-															data-testid="edit-schedule-button"
-															onClick={e => { e.stopPropagation(); editSchedule(schedule.id); }}
-															aria-label="Edit schedule"
-														>
-															<span className="codicon codicon-edit" />
-														</Button>
-														
-														{/* Delete Button */}
-														<Button
-															variant="ghost"
-															size="sm"
-															className="h-7 w-7 p-0"
-															title="Delete schedule"
-															data-testid="delete-schedule-button"
-															onClick={e => {
-																e.stopPropagation();
-																// Show confirmation dialog
-																setScheduleToDelete(schedule.id);
-																setDialogOpen(true);
-															}}
-															aria-label="Delete schedule"
-														>
-															<span className="codicon codicon-trash text-vscode-errorForeground" />
-														</Button>
-													</div>
-												</div>
-												
-												{false && <div className="text-sm text-vscode-descriptionForeground mt-1">
-													Mode: {schedule.modeDisplayName || schedule.mode} • Type: {schedule.scheduleType === "time" ? "Time Schedule" : "After Task Completion"}
-												</div>}
-												
+								<ScheduleSortControl
+									schedules={schedules}
+									sortMethod={sortMethod}
+									setSortMethod={setSortMethod}
+									sortDirection={sortDirection}
+									setSortDirection={setSortDirection}
+								>
+									{(sortedSchedules) => (
+										<Virtuoso
+											style={{
+												height: "400px",
+												overflowY: "auto",
+											}}
+											data={sortedSchedules}
+											data-testid="virtuoso-container"
+											initialTopMostItemIndex={0}
+											components={{
+												List: React.forwardRef((props, ref) => (
+													<div {...props} ref={ref} data-testid="virtuoso-item-list" />
+												)),
+											}}
+											itemContent={(index, schedule) => (
 												<div
-													className="text-sm text-vscode-descriptionForeground mt-2"
-													style={{
-														overflow: "hidden",
-														display: "-webkit-box",
-														WebkitLineClamp: 2,
-														WebkitBoxOrient: "vertical"
-													}}
+													data-testid={`schedule-item-${schedule.id}`}
+													key={schedule.id}
+													className="cursor-pointer border-b border-vscode-panel-border"
+													onClick={() => editSchedule(schedule.id)}
 												>
-													<span className="font-bold">{schedule.modeDisplayName || schedule.mode}: </span>{schedule.taskInstructions}
-												</div>
-												
-												{schedule.scheduleType === "time" && (
-													<div className="mt-2 text-xs text-vscode-descriptionForeground">
-														Every {schedule.timeInterval} {schedule.timeUnit}(s)
-														{Object.values(schedule.selectedDays || {}).filter(Boolean).length > 0 && (
-															<span> • {Object.values(schedule.selectedDays || {}).filter(Boolean).length} days selected</span>
-														)}
+													<div className="flex items-start p-3 gap-2">
+														<div className="flex-1">
+															<div className="flex justify-between items-center">
+																<span className="text-vscode-foreground font-medium">
+																	{schedule.name}
+																</span>
+																<div className="flex flex-row gap-1">
+																	{/* Active/Inactive Status Indicator */}
+																	<Button
+																		variant="ghost"
+																		size="sm"
+																		className={`h-7 px-2 py-0 text-xs font-semibold rounded ${
+																			schedule.active === false
+																				? "text-vscode-descriptionForeground"
+																				: "text-green-600"
+																		}`}
+																		onClick={e => {
+																			e.stopPropagation();
+																			// Treat undefined as true (so toggle to false)
+																			const isActive = schedule.active !== false;
+																			// Toggle active state
+																			const active = !isActive;
+																			
+																			// 1. Call backend to toggle schedule active state
+																			vscode.postMessage({
+																				type: "toggleScheduleActive",
+																				scheduleId: schedule.id,
+																				active,
+																			});
+																			
+																			// 2. Update local state and storage
+																			const updatedSchedules = schedules.map(s =>
+																				s.id === schedule.id ? { ...s, active } : s
+																			);
+																			
+																			try {
+																				localStorage.setItem('roo-schedules', JSON.stringify(updatedSchedules));
+																				console.log("Saved updated schedules to localStorage after toggle active");
+																			} catch (e) {
+																				console.error("Failed to save schedules to localStorage after toggle active:", e);
+																			}
+																			
+																			const fileContent = JSON.stringify({ schedules: updatedSchedules }, null, 2);
+																			console.log("Saving updated schedules to file after toggle active:", fileContent);
+																			
+																			vscode.postMessage({
+																				type: "openFile",
+																				text: "./.roo/schedules.json",
+																				values: { create: true, content: fileContent }
+																			});
+																			
+																			setSchedules(updatedSchedules);
+																			
+																			// Notify backend to reload schedules and reschedule timers
+																			notifySchedulesUpdated();
+																		}}
+																		aria-label={schedule.active === false ? "Activate schedule" : "Deactivate schedule"}
+																	>
+																		<span className="flex items-center">
+																			<span className={`inline-block w-2 h-2 rounded-full mr-1 ${
+																				schedule.active === false ? "bg-vscode-descriptionForeground" : "bg-green-600"
+																			}`}></span>
+																			{schedule.active === false ? "Inactive" : "Active"}
+																		</span>
+																	</Button>
+																	
+																	{/* Edit Button */}
+																	<Button
+																		variant="ghost"
+																		size="sm"
+																		className="h-7 w-7 p-0"
+																		title="Edit schedule"
+																		data-testid="edit-schedule-button"
+																		onClick={e => { e.stopPropagation(); editSchedule(schedule.id); }}
+																		aria-label="Edit schedule"
+																	>
+																		<span className="codicon codicon-edit" />
+																	</Button>
+																	
+																	{/* Delete Button */}
+																	<Button
+																		variant="ghost"
+																		size="sm"
+																		className="h-7 w-7 p-0"
+																		title="Delete schedule"
+																		data-testid="delete-schedule-button"
+																		onClick={e => {
+																			e.stopPropagation();
+																			// Show confirmation dialog
+																			setScheduleToDelete(schedule.id);
+																			setDialogOpen(true);
+																		}}
+																		aria-label="Delete schedule"
+																	>
+																		<span className="codicon codicon-trash text-vscode-errorForeground" />
+																	</Button>
+																</div>
+															</div>
+															
+															{false && <div className="text-sm text-vscode-descriptionForeground mt-1">
+																Mode: {schedule.modeDisplayName || schedule.mode} • Type: {schedule.scheduleType === "time" ? "Time Schedule" : "After Task Completion"}
+															</div>}
+															
+															<div
+																className="text-sm text-vscode-descriptionForeground mt-2"
+																style={{
+																	overflow: "hidden",
+																	display: "-webkit-box",
+																	WebkitLineClamp: 2,
+																	WebkitBoxOrient: "vertical"
+																}}
+															>
+																<span className="font-bold">{schedule.modeDisplayName || schedule.mode}: </span>{schedule.taskInstructions}
+															</div>
+															
+															{schedule.scheduleType === "time" && (
+																<div className="mt-2 text-xs text-vscode-descriptionForeground">
+																	Every {schedule.timeInterval} {schedule.timeUnit}(s)
+																	{Object.values(schedule.selectedDays || {}).filter(Boolean).length > 0 && (
+																		<span> • {Object.values(schedule.selectedDays || {}).filter(Boolean).length} days selected</span>
+																	)}
+																</div>
+															)}
+															
+															{(schedule.lastExecutionTime || schedule.lastSkippedTime) && (
+															  <div className="mt-2 text-xs text-vscode-descriptionForeground flex items-center">
+																<span className="codicon codicon-clock mr-1"></span>
+															    Last {(!schedule.lastSkippedTime || schedule.lastExecutionTime + '' > schedule.lastSkippedTime)
+															                    ? 'executed' : 'skipped'}: {schedule.lastTaskId && schedule.lastExecutionTime && (!schedule.lastSkippedTime || schedule.lastExecutionTime > schedule.lastSkippedTime) ? (
+															      <button
+															        className="inline-flex items-center px-1 py-0.5 rounded hover:bg-vscode-button-hoverBackground text-vscode-linkForeground hover:underline cursor-pointer"
+															        onClick={(e) => {
+															          e.stopPropagation();
+															          console.log(`Clicked on last execution time for schedule: ${schedule.id}`);
+															          
+															          // Send message to extension to resume the task
+															          console.log("Sending resumeTask message to extension");
+															          vscode.postMessage({
+															            type: "resumeTask",
+															            taskId: schedule.lastTaskId
+															          });
+															        }}
+															        title="Click to view/resume this task in Roo Code"
+															      >
+															        {formatDateWithoutYearAndSeconds(schedule.lastExecutionTime)}
+															      </button> 
+															    ) : (
+															      formatDateWithoutYearAndSeconds(
+															                      schedule.lastExecutionTime && schedule.lastSkippedTime
+															                        ? (schedule.lastExecutionTime > schedule.lastSkippedTime ? schedule.lastExecutionTime : schedule.lastSkippedTime)
+															                        : (schedule.lastExecutionTime || schedule.lastSkippedTime || new Date().toISOString())
+															                    )
+															    ) } 
+															  </div>
+															)}
+															
+															{schedule.active !== false && schedule.scheduleType === "time" && (
+															  <div className="mt-1 text-xs text-vscode-descriptionForeground flex items-center">
+															    <span className="codicon codicon-calendar mr-1"></span>
+															    Next execution: &nbsp;{(() => {
+															      // Use stored nextExecutionTime if available, otherwise calculate it
+															      const nextTime = schedule.nextExecutionTime
+															        ? new Date(schedule.nextExecutionTime)
+															        : null;
+															        
+															      if (!nextTime) {
+															        return <span className="italic">Not scheduled</span>;
+															      }
+															      
+															      const now = new Date();
+															      const timeDiff = nextTime.getTime() - now.getTime();
+															      const isUpcomingSoon = timeDiff <= 60 * 60 * 1000; // Within the next hour
+															      
+															      return (
+															        <span className='text-vscode-linkForeground'>
+															          {formatDateWithoutYearAndSeconds(nextTime.toISOString())}
+															          {isUpcomingSoon && (
+															            <span className="ml-1 text-vscode-notificationsInfoIcon">(soon)</span>
+															          )}
+															        </span>
+															      );
+															    })()}
+															  </div>
+															)}
+														</div>
 													</div>
-												)}
-												
-												{(schedule.lastExecutionTime || schedule.lastSkippedTime) && (
-												  <div className="mt-2 text-xs text-vscode-descriptionForeground flex items-center">
-													<span className="codicon codicon-clock mr-1"></span>
-												    Last {(!schedule.lastSkippedTime || schedule.lastExecutionTime + '' > schedule.lastSkippedTime)
-												                    ? 'executed' : 'skipped'}: {schedule.lastTaskId && schedule.lastExecutionTime && (!schedule.lastSkippedTime || schedule.lastExecutionTime > schedule.lastSkippedTime) ? (
-												      <button
-												        className="inline-flex items-center px-1 py-0.5 rounded hover:bg-vscode-button-hoverBackground text-vscode-linkForeground hover:underline cursor-pointer"
-												        onClick={(e) => {
-												          e.stopPropagation();
-												          console.log(`Clicked on last execution time for schedule: ${schedule.id}`);
-												          
-												          // Send message to extension to resume the task
-												          console.log("Sending resumeTask message to extension");
-												          vscode.postMessage({
-												            type: "resumeTask",
-												            taskId: schedule.lastTaskId
-												          });
-												        }}
-												        title="Click to view/resume this task in Roo Code"
-												      >
-												        {formatDateWithoutYearAndSeconds(schedule.lastExecutionTime)}
-												      </button> 
-												    ) : (
-												      formatDateWithoutYearAndSeconds(
-												                      schedule.lastExecutionTime && schedule.lastSkippedTime
-												                        ? (schedule.lastExecutionTime > schedule.lastSkippedTime ? schedule.lastExecutionTime : schedule.lastSkippedTime)
-												                        : (schedule.lastExecutionTime || schedule.lastSkippedTime || new Date().toISOString())
-												                    )
-												    ) } 
-												  </div>
-												)}
-												
-												{schedule.active !== false && schedule.scheduleType === "time" && (
-												  <div className="mt-1 text-xs text-vscode-descriptionForeground flex items-center">
-												    <span className="codicon codicon-calendar mr-1"></span>
-												    Next execution: &nbsp;{(() => {
-												      // Use stored nextExecutionTime if available, otherwise calculate it
-												      const nextTime = schedule.nextExecutionTime
-												        ? new Date(schedule.nextExecutionTime)
-												        : null;
-												        
-												      if (!nextTime) {
-												        return <span className="italic">Not scheduled</span>;
-												      }
-												      
-												      const now = new Date();
-												      const timeDiff = nextTime.getTime() - now.getTime();
-												      const isUpcomingSoon = timeDiff <= 60 * 60 * 1000; // Within the next hour
-												      
-												      return (
-												        <span className='text-vscode-linkForeground'>
-												          {formatDateWithoutYearAndSeconds(nextTime.toISOString())}
-												          {isUpcomingSoon && (
-												            <span className="ml-1 text-vscode-notificationsInfoIcon">(soon)</span>
-												          )}
-												        </span>
-												      );
-												    })()}
-												  </div>
-												)}
-											</div>
-										</div>
-									</div>
-								)}
-							/>
-								</div>
+												</div>
+											)}
+										/>
+									)}
+								</ScheduleSortControl>
+							</div>
 						)}
 					</TabsContent>
-					
+						
 					<TabsContent value="edit">
 						<ScheduleForm
 							ref={scheduleFormRef}
@@ -723,4 +637,5 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 		</Tab>
 	)
 }
+
 export default SchedulerView

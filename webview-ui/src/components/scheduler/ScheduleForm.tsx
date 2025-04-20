@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, forwardRef, useImperativeHandle } from "react"
+import React, { useState, useEffect, useCallback, forwardRef, useImperativeHandle, useMemo } from "react"
 import { Button } from "../../components/ui/button"
 import { Input } from "../../components/ui/input"
 import { Badge } from "../../components/ui/badge"
@@ -70,6 +70,8 @@ const ScheduleForm = forwardRef<ScheduleFormHandle, ScheduleFormProps>(
     ? { ...initialData, selectedDays: { ...allDaysSelected } }
     : initialData;
   const [form, setForm] = useState<RequiredScheduleFormData>(getDefinedForm(initialFormData));
+  const [hasStartDate, setHasStartDate] = useState<boolean>(!!initialData?.startDate);
+  const [hasExpiration, setHasExpiration] = useState<boolean>(!!initialData?.expirationDate);
 
   // Validation state for parent
   const isValid =
@@ -98,7 +100,7 @@ const ScheduleForm = forwardRef<ScheduleFormHandle, ScheduleFormProps>(
 
 
   useEffect(() => {
-    if (!isEditing && !initialData?.startDate) {
+    if (hasStartDate && !isEditing && !initialData?.startDate) {
       const now = new Date();
       const currentHour = now.getHours();
       
@@ -115,7 +117,7 @@ const ScheduleForm = forwardRef<ScheduleFormHandle, ScheduleFormProps>(
         startMinute: '00'
       }));
     }
-  }, [isEditing, initialData]);
+  }, [isEditing, initialData, hasStartDate]);
 
   const setField = <K extends keyof RequiredScheduleFormData>(key: K, value: RequiredScheduleFormData[K]) =>
     setForm(f => ({ ...f, [key]: value }));
@@ -135,10 +137,61 @@ const ScheduleForm = forwardRef<ScheduleFormHandle, ScheduleFormProps>(
 
   useEffect(() => {
     if (form.expirationDate && form.startDate && new Date(form.expirationDate) < new Date(form.startDate)) {
-      setField("expirationDate", form.startDate);
+      // Set expiration to one day after start date
+      const startDate = new Date(form.startDate);
+      const nextDay = new Date(startDate);
+      nextDay.setDate(startDate.getDate() + 1);
+      
+      // Format date in local time zone (YYYY-MM-DD)
+      const year = nextDay.getFullYear();
+      const month = (nextDay.getMonth() + 1).toString().padStart(2, '0');
+      const day = nextDay.getDate().toString().padStart(2, '0');
+      const nextDayFormatted = `${year}-${month}-${day}`;
+      
+      setField("expirationDate", nextDayFormatted);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.startDate, form.expirationDate]);
+
+  // Handle changes to hasStartDate state
+  useEffect(() => {
+    if (hasStartDate && !form.startDate) {
+      // If start date is enabled but no date is set, set to current date
+      const now = new Date();
+      const currentHour = now.getHours();
+      
+      // Format date in local time zone (YYYY-MM-DD)
+      const year = now.getFullYear();
+      const month = (now.getMonth() + 1).toString().padStart(2, '0');
+      const day = now.getDate().toString().padStart(2, '0');
+      const localDate = `${year}-${month}-${day}`;
+      
+      setForm(f => ({
+        ...f,
+        startDate: localDate,
+        startHour: currentHour.toString().padStart(2, '0'),
+        startMinute: '00'
+      }));
+    }
+  }, [hasStartDate, form.startDate]);
+
+  // Handle changes to hasExpiration state
+  useEffect(() => {
+    if (hasExpiration && !form.expirationDate && form.startDate) {
+      // If expiration is enabled but no date is set, default to one day after start date
+      const startDate = new Date(form.startDate);
+      const nextDay = new Date(startDate);
+      nextDay.setDate(startDate.getDate() + 1);
+      
+      // Format date in local time zone (YYYY-MM-DD)
+      const year = nextDay.getFullYear();
+      const month = (nextDay.getMonth() + 1).toString().padStart(2, '0');
+      const day = nextDay.getDate().toString().padStart(2, '0');
+      const nextDayFormatted = `${year}-${month}-${day}`;
+      
+      setField("expirationDate", nextDayFormatted);
+    }
+  }, [hasExpiration, form.expirationDate, form.startDate]);
 
   const handleSave = () => {
     if (!form.name.trim()) {
@@ -149,7 +202,30 @@ const ScheduleForm = forwardRef<ScheduleFormHandle, ScheduleFormProps>(
       console.error("Expiration time must be after start time");
       return;
     }
-    onSave(form);
+    
+    let formToSave = form;
+    
+    // If hasStartDate is false, clear start date fields
+    if (!hasStartDate) {
+      formToSave = {
+        ...formToSave,
+        startDate: "",
+        startHour: "00",
+        startMinute: "00"
+      };
+    }
+    
+    // If hasExpiration is false, clear expiration fields
+    if (!hasExpiration) {
+      formToSave = {
+        ...formToSave,
+        expirationDate: "",
+        expirationHour: "00",
+        expirationMinute: "00"
+      };
+    }
+    
+    onSave(formToSave);
   };
 
   return (
@@ -253,32 +329,102 @@ const ScheduleForm = forwardRef<ScheduleFormHandle, ScheduleFormProps>(
               </div>
               <DaySelector selectedDays={form.selectedDays} toggleDay={toggleDay} />
             </div>
-            <DateTimeSelector
-              label="Start Time"
-              date={form.startDate}
-              hour={form.startHour}
-              minute={form.startMinute}
-              setDate={v => setField("startDate", v)}
-              setHour={v => setField("startHour", v)}
-              setMinute={v => setField("startMinute", v)}
-              dateAriaLabel="Start date"
-              hourAriaLabel="Start hour"
-              minuteAriaLabel="Start minute"
-            />
-            <DateTimeSelector
-              label="Expires"
-              date={form.expirationDate}
-              hour={form.expirationHour}
-              minute={form.expirationMinute}
-              setDate={v => setField("expirationDate", v)}
-              setHour={v => setField("expirationHour", v)}
-              setMinute={v => setField("expirationMinute", v)}
-              minDate={form.startDate}
-              errorMessage={!validateExpirationTime() ? "Expiration time must be after start time" : undefined}
-              dateAriaLabel="Expiration date"
-              hourAriaLabel="Expiration hour"
-              minuteAriaLabel="Expiration minute"
-            />
+            <div className="flex items-center gap-2 mt-2">
+              <div
+                className="flex items-center cursor-pointer"
+                onClick={() => setHasStartDate(!hasStartDate)}
+              >
+                <div className={`w-4 h-4 border rounded-xs flex items-center justify-center mr-2 ${
+                  hasStartDate
+                    ? "bg-vscode-button-background border-vscode-button-background"
+                    : "border-vscode-input-border"
+                }`}>
+                  {hasStartDate && (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="10"
+                      height="10"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="text-vscode-button-foreground"
+                    >
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                  )}
+                </div>
+                <label className="text-vscode-descriptionForeground text-sm cursor-pointer">
+                  Has a specified start date?
+                </label>
+              </div>
+            </div>
+            
+            {hasStartDate && (
+              <DateTimeSelector
+                label="Start Time"
+                date={form.startDate}
+                hour={form.startHour}
+                minute={form.startMinute}
+                setDate={v => setField("startDate", v)}
+                setHour={v => setField("startHour", v)}
+                setMinute={v => setField("startMinute", v)}
+                dateAriaLabel="Start date"
+                hourAriaLabel="Start hour"
+                minuteAriaLabel="Start minute"
+              />
+            )}
+            <div className="flex items-center gap-2 mt-2">
+              <div
+                className="flex items-center cursor-pointer"
+                onClick={() => setHasExpiration(!hasExpiration)}
+              >
+                <div className={`w-4 h-4 border rounded-xs flex items-center justify-center mr-2 ${
+                  hasExpiration
+                    ? "bg-vscode-button-background border-vscode-button-background"
+                    : "border-vscode-input-border"
+                }`}>
+                  {hasExpiration && (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="10"
+                      height="10"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="text-vscode-button-foreground"
+                    >
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                  )}
+                </div>
+                <label className="text-vscode-descriptionForeground text-sm cursor-pointer">
+                  Has expiration?
+                </label>
+              </div>
+            </div>
+            
+            {hasExpiration && (
+              <DateTimeSelector
+                label="Expires"
+                date={form.expirationDate}
+                hour={form.expirationHour}
+                minute={form.expirationMinute}
+                setDate={v => setField("expirationDate", v)}
+                setHour={v => setField("expirationHour", v)}
+                setMinute={v => setField("expirationMinute", v)}
+                minDate={form.startDate}
+                errorMessage={!validateExpirationTime() ? "Expiration time must be after start time" : undefined}
+                dateAriaLabel="Expiration date"
+                hourAriaLabel="Expiration hour"
+                minuteAriaLabel="Expiration minute"
+              />
+            )}
             <div className="flex items-center gap-2 mt-2">
               <div
                 className="flex items-center cursor-pointer"

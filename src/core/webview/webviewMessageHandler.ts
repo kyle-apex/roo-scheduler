@@ -286,6 +286,19 @@ export const webviewMessageHandler = async (provider: any, message: WebviewMessa
 							const document = await vscode.workspace.openTextDocument(uri)
 							await vscode.window.showTextDocument(document, { preview: false })
 						}
+						
+						// Check if there's a callback to execute after saving
+						if (message.values.callback === "schedulesUpdated") {
+							// Trigger the schedulesUpdated handler to reload schedules and set up timers
+							console.log('Executing schedulesUpdated callback after file save');
+							try {
+								const { SchedulerService } = await import("../../services/scheduler/SchedulerService");
+								const schedulerService = SchedulerService.getInstance(provider.contextProxy.extensionContext);
+								await schedulerService.reloadSchedulesAndReschedule();
+							} catch (error) {
+								console.log("Failed to reload schedules and reschedule in callback:", error);
+							}
+						}
 					}
 					// If this is a read operation (no content)
 					else {

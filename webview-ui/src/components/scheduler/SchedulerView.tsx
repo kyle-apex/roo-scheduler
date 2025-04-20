@@ -49,7 +49,7 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 	const [selectedScheduleId, setSelectedScheduleId] = useState<string | null>(null)
 	
 	// Sorting state
-	type SortMethod = "nextExecution" | "lastExecution" | "lastUpdated" | "created"
+	type SortMethod = "nextExecution" | "lastExecution" | "lastUpdated" | "created" | "activeStatus"
 	type SortDirection = "asc" | "desc"
 	
 	// Initialize sort state from localStorage or use defaults
@@ -234,23 +234,25 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 		const fileContent = JSON.stringify({ schedules: updatedSchedules }, null, 2)
 		console.log("Saving schedules to file:", fileContent)
 		
+		// First update local state
+		setSchedules(updatedSchedules)
+		
+		// Then save to file and notify backend after file is saved
+		// This ensures the file is written before the backend tries to read it
 		vscode.postMessage({
-			type: "openFile",
-			text: "./.roo/schedules.json",
-			values: { create: true, content: fileContent }
+		  type: "openFile",
+		  text: "./.roo/schedules.json",
+		  values: {
+		    create: true,
+		    content: fileContent,
+		    callback: "schedulesUpdated" // Add callback to trigger schedulesUpdated after file is saved
+		  }
 		})
 		
-		// Update state
-		setSchedules(updatedSchedules)
-		notifySchedulesUpdated(); // Notify backend to reload schedules and reschedule timers
 		resetForm()
 		setActiveTab("schedules")
 	}
 
-	// Notify backend to reload schedules and reschedule tasks
-	const notifySchedulesUpdated = () => {
-		vscode.postMessage({ type: "schedulesUpdated" });
-	};
 
 	// Edit schedule
 	const editSchedule = (scheduleId: string) => {
@@ -303,17 +305,19 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 		const fileContent = JSON.stringify({ schedules: updatedSchedules }, null, 2)
 		console.log("Saving updated schedules to file after deletion:", fileContent)
 		
-		vscode.postMessage({
-			type: "openFile",
-			text: "./.roo/schedules.json",
-			values: { create: true, content: fileContent }
-		})
-		
-		// Update state
+		// Update state first
 		setSchedules(updatedSchedules)
 		
-		// Notify backend to reload schedules and reschedule timers
-		notifySchedulesUpdated();
+		// Then save to file with callback to reload schedules
+		vscode.postMessage({
+		  type: "openFile",
+		  text: "./.roo/schedules.json",
+		  values: {
+		    create: true,
+		    content: fileContent,
+		    callback: "schedulesUpdated" // Add callback to trigger schedulesUpdated after file is saved
+		  }
+		})
 		
 		// If we were editing this schedule, reset the form
 		if (selectedScheduleId === scheduleId) {
@@ -451,16 +455,19 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 																			const fileContent = JSON.stringify({ schedules: updatedSchedules }, null, 2);
 																			console.log("Saving updated schedules to file after toggle active:", fileContent);
 																			
+																			// Update state first
+																			setSchedules(updatedSchedules);
+																			
+																			// Then save to file with callback to reload schedules
 																			vscode.postMessage({
 																				type: "openFile",
 																				text: "./.roo/schedules.json",
-																				values: { create: true, content: fileContent }
+																				values: {
+																					create: true,
+																					content: fileContent,
+																					callback: "schedulesUpdated" // Add callback to trigger schedulesUpdated after file is saved
+																				}
 																			});
-																			
-																			setSchedules(updatedSchedules);
-																			
-																			// Notify backend to reload schedules and reschedule timers
-																			notifySchedulesUpdated();
 																		}}
 																		aria-label={schedule.active === false ? "Activate schedule" : "Deactivate schedule"}
 																	>

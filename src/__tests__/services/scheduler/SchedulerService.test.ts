@@ -820,6 +820,32 @@ describe('SchedulerService', () => {
     });
   });
 
+  describe('reloadSchedulesAndReschedule', () => {
+    it('should reload schedules and set up timers when called', async () => {
+      // Mock fileExistsAtPath to return true
+      (fileExistsAtPath as any).mockResolvedValue(true);
+      
+      // Mock fs.readFile to return sample schedules
+      (fs.readFile as any).mockResolvedValue(JSON.stringify(sampleSchedules));
+      
+      // Spy on the setupTimers method
+      const setupTimersSpy = jest.spyOn(schedulerService as any, 'setupTimers');
+      
+      // Call reloadSchedulesAndReschedule
+      await (schedulerService as any).reloadSchedulesAndReschedule();
+      
+      // Verify that loadSchedules was called
+      expect(fileExistsAtPath).toHaveBeenCalled();
+      expect(fs.readFile).toHaveBeenCalled();
+      
+      // Verify that setupTimers was called
+      expect(setupTimersSpy).toHaveBeenCalled();
+      
+      // Restore the spy
+      setupTimersSpy.mockRestore();
+    });
+  });
+
   describe('executeSchedule', () => {
     it('should execute a schedule and update last execution time', async () => {
       // Mock fs.writeFile

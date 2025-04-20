@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import { Schedule } from "./types";
 
-type SortMethod = "nextExecution" | "lastExecution" | "lastUpdated" | "created";
+type SortMethod = "nextExecution" | "lastExecution" | "lastUpdated" | "created" | "activeStatus";
 type SortDirection = "asc" | "desc";
 
 interface ScheduleSortControlProps {
@@ -83,6 +83,13 @@ const ScheduleSortControl: React.FC<ScheduleSortControlProps> = ({
           else if (!b.createdAt) comparison = -1;
           else comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
           break;
+        case "activeStatus":
+          // Sort by active status (active first, then inactive)
+          // Treat undefined as true (active) for backward compatibility
+          const aActive = a.active !== false;
+          const bActive = b.active !== false;
+          comparison = aActive === bActive ? 0 : aActive ? 1 : -1;
+          break;
         default:
           return 0;
       }
@@ -105,6 +112,7 @@ const ScheduleSortControl: React.FC<ScheduleSortControlProps> = ({
             <option value="lastExecution">Last Executed</option>
             <option value="lastUpdated">Last Updated</option>
             <option value="created">Created</option>
+            <option value="activeStatus">Active/Inactive</option>
           </select>
         </div>
         <div className="flex items-center">

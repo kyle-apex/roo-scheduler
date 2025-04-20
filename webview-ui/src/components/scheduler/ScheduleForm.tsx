@@ -291,7 +291,7 @@ const ScheduleForm = forwardRef<ScheduleFormHandle, ScheduleFormProps>(
         </div>
       </div>
       <div className="flex flex-col gap-3">
-        <div className="flex flex-col gap-2">
+        {false && <div className="flex flex-col gap-2">
           <label className="text-vscode-descriptionForeground text-sm">Schedule Type</label>
           <Select value={form.scheduleType} onValueChange={v => setField("scheduleType", v)}>
             <SelectTrigger className="w-full bg-vscode-dropdown-background !bg-vscode-dropdown-background hover:!bg-vscode-dropdown-background border border-vscode-dropdown-border">
@@ -302,7 +302,7 @@ const ScheduleForm = forwardRef<ScheduleFormHandle, ScheduleFormProps>(
               <SelectItem value="completion">After Task Completion</SelectItem>
             </SelectContent>
           </Select>
-        </div>
+        </div>}
         {form.scheduleType === "time" && (
           <div className="flex flex-col gap-3 mt-2">
             <div className="flex items-center gap-2">

@@ -222,16 +222,6 @@ const ScheduleForm = forwardRef<ScheduleFormHandle, ScheduleFormProps>(
     
     let formToSave = form;
     
-    // If hasStartDate is false, clear start date fields
-    if (!hasStartDate) {
-      formToSave = {
-        ...formToSave,
-        startDate: "",
-        startHour: "00",
-        startMinute: "00"
-      };
-    }
-    
     // If hasExpiration is false, clear expiration fields
     if (!hasExpiration) {
       formToSave = {

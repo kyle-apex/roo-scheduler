@@ -10,7 +10,7 @@ import {
 import { vscode } from "../../utils/vscode"
 import { Tab, TabContent, TabHeader } from "../common/Tab"
 import { useAppTranslation } from "../../i18n/TranslationContext"
-import ConfirmationDialog from "../../components/ui/ConfirmationDialog"
+import ConfirmationDialog from "../ui/confirmation-dialog"
 
 // Import new components
 import ScheduleForm from "./ScheduleForm"

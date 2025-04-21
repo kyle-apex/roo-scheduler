@@ -7,7 +7,7 @@ import { Schedule } from "./types"
 import LabeledInput from "./LabeledInput"
 import DaySelector from "./DaySelector"
 import DateTimeSelector from "./DateTimeSelector"
-import Checkbox from "@/components/ui/Checkbox"
+import Checkbox from "@/components/ui/checkbox"
 
 export type ScheduleFormData = Omit<Schedule, 'id' | 'createdAt' | 'updatedAt' | 'modeDisplayName'>;
 
@@ -63,10 +63,10 @@ const getDefinedForm = (initialData?: Partial<ScheduleFormData>): RequiredSchedu
 
 const ScheduleForm = forwardRef<ScheduleFormHandle, ScheduleFormProps>(
   ({ initialData, isEditing, availableModes, onSave, onCancel, onValidityChange }, ref) => {
-  // For new schedules, we'll use defaultDays (all false) as the initial state
+  // For new schedules, we'll use allDaysSelected (all true) as the initial state
   // For editing, use the provided selectedDays or defaultDays
   const initialFormData = (!isEditing && (!initialData || !initialData.selectedDays))
-    ? { ...initialData, selectedDays: { ...defaultDays } }
+    ? { ...initialData, selectedDays: { ...allDaysSelected } }
     : initialData;
   const [form, setForm] = useState<RequiredScheduleFormData>(getDefinedForm(initialFormData));
   const [hasStartDate, setHasStartDate] = useState<boolean>(!!initialData?.startDate);

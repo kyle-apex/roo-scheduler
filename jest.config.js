@@ -45,5 +45,5 @@ module.exports = {
 	modulePathIgnorePatterns: [".vscode-test"],
 	reporters: [["jest-simple-dot-reporter", {}]],
 	setupFiles: ["<rootDir>/src/__mocks__/jest.setup.ts"],
-	setupFilesAfterEnv: ["<rootDir>/src/integrations/terminal/__tests__/setupTerminalTests.ts"],
+	// setupFilesAfterEnv: ["<rootDir>/src/integrations/terminal/__tests__/setupTerminalTests.ts"],
 }

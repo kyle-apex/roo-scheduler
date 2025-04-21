@@ -8,16 +8,21 @@ jest.mock("vscode", () => ({
   commands: {
     executeCommand: jest.fn(),
   },
+  window: {
+    showInformationMessage: jest.fn(),
+  },
 }));
 
 const mockGetCurrentTaskStack = jest.fn();
 const mockGetConfiguration = jest.fn();
 const mockCancelCurrentTask = jest.fn();
+const mockIsTaskInHistory = jest.fn();
 
 const mockApi = {
   getCurrentTaskStack: mockGetCurrentTaskStack,
   getConfiguration: mockGetConfiguration,
   cancelCurrentTask: mockCancelCurrentTask,
+  isTaskInHistory: mockIsTaskInHistory,
 };
 
 const mockExtension = {
@@ -226,9 +231,11 @@ describe("RooService.resumeTask", () => {
   it("opens the Roo Cline extension and resumes the task", async () => {
     mockResumeTask.mockResolvedValue(undefined);
     mockExecuteCommand.mockResolvedValue(undefined);
+    mockIsTaskInHistory.mockResolvedValue(true);
 
     await RooService.resumeTask("task-123");
     
+    expect(mockIsTaskInHistory).toHaveBeenCalledWith("task-123");
     expect(mockExecuteCommand).toHaveBeenCalledWith("workbench.view.extension.roo-cline-ActivityBar");
     expect(mockResumeTask).toHaveBeenCalledWith("task-123");
   });

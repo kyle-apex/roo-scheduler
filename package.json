@@ -159,7 +159,7 @@
 		"package": "npm-run-all -l -p build:webview build:esbuild check-types lint",
 		"pretest": "npm run compile",
 		"dev": "cd webview-ui && npm run dev",
-		"test": "node scripts/run-tests.js",
+		"test": "npm run test:extension && npm run test:webview",
 		"test:extension": "jest",
 		"test:webview": "cd webview-ui && npm run test",
 		"test:e2e": "npm run vscode-test && cd e2e && npm run test",

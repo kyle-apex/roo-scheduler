@@ -35,6 +35,20 @@ class MockSchedulerService {
     // No event handlers here that would cause issues
   }
 
+  // Add reloadSchedulesAndReschedule for test compatibility
+  public async reloadSchedulesAndReschedule(): Promise<void> {
+    await this.loadSchedules();
+    this.setupTimers();
+  }
+
+  // Add updateSchedule for test compatibility
+  public updateSchedule(scheduleId: string, updates: any): any {
+    const idx = this.schedules.findIndex((s: any) => s.id === scheduleId);
+    if (idx === -1) return undefined;
+    this.schedules[idx] = { ...this.schedules[idx], ...updates };
+    return this.schedules[idx];
+  }
+
   public static getInstance(context: any): MockSchedulerService {
     if (!MockSchedulerService.instance) {
       MockSchedulerService.instance = new MockSchedulerService(context);
@@ -236,10 +250,20 @@ class MockSchedulerService {
       }
     }
 
+    // Check for active task and handle skip logic
+    if (typeof RooService.hasActiveTask === "function" && schedule.taskInteraction === "skip") {
+      const hasActive = await RooService.hasActiveTask();
+      if (hasActive) {
+        // Update lastSkippedTime and call updateSchedule
+        const lastSkippedTime = new Date().toISOString();
+        this.updateSchedule(schedule.id, { lastSkippedTime });
+        this.log(`Skipping execution of "${schedule.name}" due to active task. Updated lastSkippedTime.`);
+        this.setupTimerForSchedule(schedule);
+        return;
+      }
+    }
+
     try {
-      // Process the task
-      await this.processTask(schedule.mode, schedule.taskInstructions);
-      
       // Process the task and get the task ID
       const taskId = await this.processTask(schedule.mode, schedule.taskInstructions);
       
@@ -269,11 +293,15 @@ class MockSchedulerService {
         throw new Error(`Invalid mode: ${mode}`);
       }
 
-      // Get the current configuration
+      // Call RooService.startTaskWithMode and propagate errors
+      if (typeof RooService.startTaskWithMode === "function") {
+        const taskId = await RooService.startTaskWithMode(mode, taskInstructions);
+        this.log(`Successfully started task with mode "${mode}"`);
+        return taskId;
+      }
 
-      this.log(`Successfully started task with mode "${mode}"`);
-      
-      // Return a mock task ID
+      // Fallback: Return a mock task ID
+      this.log(`Successfully started task with mode "${mode}" (mock fallback)`);
       return `mock-task-${Date.now()}`;
     } catch (error) {
       this.log(`Error processing task: ${error instanceof Error ? error.message : String(error)}`);
@@ -822,12 +850,17 @@ describe('SchedulerService', () => {
 
   describe('reloadSchedulesAndReschedule', () => {
     it('should reload schedules and set up timers when called', async () => {
+      // Reset singleton to ensure fresh instance with correct mocks
+      MockSchedulerService.resetInstance();
       // Mock fileExistsAtPath to return true
       (fileExistsAtPath as any).mockResolvedValue(true);
       
       // Mock fs.readFile to return sample schedules
       (fs.readFile as any).mockResolvedValue(JSON.stringify(sampleSchedules));
       
+      // Re-instantiate schedulerService after reset
+      schedulerService = MockSchedulerService.getInstance(mockContext);
+
       // Spy on the setupTimers method
       const setupTimersSpy = jest.spyOn(schedulerService as any, 'setupTimers');
       

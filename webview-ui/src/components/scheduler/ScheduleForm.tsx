@@ -1,16 +1,13 @@
 import React, { useState, useEffect, useCallback, forwardRef, useImperativeHandle, useMemo } from "react"
-import { Button } from "../../components/ui/button"
-import { Input } from "../../components/ui/input"
-import { Badge } from "../../components/ui/badge"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select"
-import { AutosizeTextarea } from "../../components/ui/autosize-textarea"
+import { Button, Input, Badge } from "@/components/ui"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { AutosizeTextarea } from "@/components/ui/autosize-textarea"
 import { ModeConfig } from "../../../../src/shared/modes"
 import { Schedule } from "./types"
 import LabeledInput from "./LabeledInput"
-import TimeInput from "./TimeInput"
 import DaySelector from "./DaySelector"
 import DateTimeSelector from "./DateTimeSelector"
-import Checkbox from "../../components/ui/Checkbox"
+import Checkbox from "@/components/ui/Checkbox"
 
 export type ScheduleFormData = Omit<Schedule, 'id' | 'createdAt' | 'updatedAt' | 'modeDisplayName'>;
 

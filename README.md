@@ -1,11 +1,13 @@
 <div align="center">
+  <img src="assets/icons/scheduler-icon.svg" alt="Roo Scheduler Icon" width="100" />
+</div>
+
+<div align="center">
 <h1>Roo Scheduler</h1>
 
 <a href="https://marketplace.visualstudio.com/items?itemName=RooVeterinaryInc.roo-scheduler" target="_blank"><img src="https://img.shields.io/badge/Download%20on%20VS%20Marketplace-blue?style=for-the-badge&logo=visualstudiocode&logoColor=white" alt="Download on VS Marketplace"></a>
-<a href="https://docs.rooscheduler.com" target="_blank"><img src="https://img.shields.io/badge/Documentation-6B46C1?style=for-the-badge&logo=readthedocs&logoColor=white" alt="Documentation"></a>
-</div>
 
-# Roo Scheduler
+</div>
 
 **Roo Scheduler** is a task scheduling extension for VS Code that seamlessly integrates with Roo Code. It allows you to automate recurring tasks and workflows directly within your development environment.
 
@@ -30,13 +32,7 @@ Roo Scheduler connects directly with Roo Code to:
 
 - Start new tasks in any available Roo Code mode
 - Pass custom instructions to Roo Code for each scheduled task
-- Manage task execution and handle conflicts intelligently
-
-## Getting Started
-
-1. [Install Roo Scheduler](https://docs.rooscheduler.com/getting-started/installing)
-2. [Connect Your AI Provider](https://docs.rooscheduler.com/getting-started/connecting-api-provider)
-3. Open the Scheduler panel and create your first scheduled task
+- Provides options to execute after specified inactivity, interrupt existing tasks, or skip execution of a schedule
 
 ## Use Cases
 
@@ -45,12 +41,6 @@ Roo Scheduler connects directly with Roo Code to:
 - **Dependency Checks**: Regularly verify and update project dependencies
 - **Codebase Analysis**: Run periodic analysis to identify optimization opportunities
 - **Custom Workflows**: Automate any repetitive development task with natural language instructions
-
-## Community
-
-- **Discord:** [Join our Discord server](https://discord.gg/rooscheduler)
-- **Reddit:** [Visit our subreddit](https://www.reddit.com/r/RooScheduler)
-- **GitHub:** [Report issues](https://github.com/RooVetGit/Roo-Scheduler/issues) or [request features](https://github.com/RooVetGit/Roo-Scheduler/discussions/categories/feature-requests)
 
 ## License
 

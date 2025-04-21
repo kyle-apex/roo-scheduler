@@ -103,6 +103,11 @@ describe("SchedulerView", () => {
 
   beforeEach(() => {
     localStorage.clear();
+    jest.spyOn(window, "addEventListener").mockImplementation((type, handler) => {
+      // Do not actually add event listeners in test
+    });
+    jest.spyOn(window, "removeEventListener").mockImplementation(() => {});
+    jest.useFakeTimers();
   });
 
   it("disables header Save button unless all required fields are filled", () => {
@@ -111,39 +116,32 @@ describe("SchedulerView", () => {
     // Enter edit mode
     fireEvent.click(screen.getByText(/Create New Schedule/i));
 
-    // Header Save button should be disabled if timeInterval is cleared
     const headerSaveButton = screen.getByTestId("header-save-button") as HTMLButtonElement;
+    const nameInput = screen.getByPlaceholderText(/Enter schedule name/i);
+    const promptInput = screen.getByPlaceholderText(/Enter task instructions/i);
     const intervalInput = screen.getByLabelText(/Time interval/i);
+
+    // Clear all fields
+    fireEvent.change(nameInput, { target: { value: "" } });
+    fireEvent.change(promptInput, { target: { value: "" } });
     fireEvent.change(intervalInput, { target: { value: "" } });
-    // Debug: log disabled state
-    // eslint-disable-next-line no-console
-    console.log("After clearing interval, disabled:", headerSaveButton.disabled);
     expect(headerSaveButton).toBeDisabled();
 
-    // Fill name
-    fireEvent.change(screen.getByPlaceholderText(/Enter schedule name/i), { target: { value: "Test Name" } });
-    // eslint-disable-next-line no-console
-    console.log("After filling name, disabled:", headerSaveButton.disabled);
+    // Fill name only
+    fireEvent.change(nameInput, { target: { value: "Test Name" } });
     expect(headerSaveButton).toBeDisabled();
 
-    // Fill instructions
-    fireEvent.change(screen.getByPlaceholderText(/Enter task instructions/i), { target: { value: "Do something" } });
-    // eslint-disable-next-line no-console
-    console.log("After filling instructions, disabled:", headerSaveButton.disabled);
+    // Fill prompt only
+    fireEvent.change(promptInput, { target: { value: "Do something" } });
     expect(headerSaveButton).toBeDisabled();
 
-    // Set timeInterval to a valid value
+    // Fill interval only
     fireEvent.change(intervalInput, { target: { value: "2" } });
-    // eslint-disable-next-line no-console
-    console.log("After setting interval to 2, disabled:", headerSaveButton.disabled);
-
-    // Now the Save button should be enabled
+    // Now all required fields are filled, Save should be enabled
     expect(headerSaveButton).not.toBeDisabled();
 
-    // Clear instructions again
-    fireEvent.change(screen.getByPlaceholderText(/Enter task instructions/i), { target: { value: "" } });
-    // eslint-disable-next-line no-console
-    console.log("After clearing instructions, disabled:", headerSaveButton.disabled);
+    // Clear prompt again
+    fireEvent.change(promptInput, { target: { value: "" } });
     expect(headerSaveButton).toBeDisabled();
   });
 
@@ -155,15 +153,15 @@ describe("SchedulerView", () => {
       modeDisplayName: "Code",
       taskInstructions: "Do something important",
       scheduleType: "time",
-      timeInterval: 5,
+      timeInterval: "5",
       timeUnit: "minutes",
       selectedDays: {},
       startDate: "2025-04-18",
-      startHour: 10,
-      startMinute: 0,
+      startHour: "10",
+      startMinute: "00",
       expirationDate: "",
-      expirationHour: 0,
-      expirationMinute: 0,
+      expirationHour: "00",
+      expirationMinute: "00",
       requireActivity: false,
       createdAt: "2025-04-18T10:00:00.000Z",
       updatedAt: "2025-04-18T10:00:00.000Z",
@@ -178,6 +176,7 @@ describe("SchedulerView", () => {
 
     it("enters edit mode when a schedule row is clicked", async () => {
       renderWithProvider();
+      jest.runAllTimers();
       // Wait for the schedule to appear
       const row = await screen.findByTestId("schedule-item-123");
       fireEvent.click(row);
@@ -189,6 +188,7 @@ describe("SchedulerView", () => {
 
     it("populates form fields with correct values when editing a schedule", async () => {
       renderWithProvider();
+      jest.runAllTimers();
       const editButton = await screen.findByTestId("edit-schedule-button");
       fireEvent.click(editButton);
       
@@ -207,6 +207,7 @@ describe("SchedulerView", () => {
 
     it("enters edit mode when Edit button is clicked, and does not double-trigger", async () => {
       renderWithProvider();
+      jest.runAllTimers();
       const editButton = await screen.findByTestId("edit-schedule-button");
       fireEvent.click(editButton);
       expect(await screen.findByTestId("header-save-button")).toBeInTheDocument();
@@ -215,6 +216,7 @@ describe("SchedulerView", () => {
 
     it("does not enter edit mode when Delete button is clicked", async () => {
       renderWithProvider();
+      jest.runAllTimers();
       const deleteButton = await screen.findByTestId("delete-schedule-button");
       fireEvent.click(deleteButton);
       // The confirmation dialog should appear, but not the edit form
@@ -224,6 +226,7 @@ describe("SchedulerView", () => {
 
     it("does not enter edit mode when Active/Inactive button is clicked", async () => {
       renderWithProvider();
+      jest.runAllTimers();
       // The Active/Inactive button is the first button in the row, with text "Active" or "Inactive"
       const activeButton = await screen.findByLabelText(/Activate schedule|Deactivate schedule/);
       fireEvent.click(activeButton);

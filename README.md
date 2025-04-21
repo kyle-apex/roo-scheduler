@@ -9,7 +9,9 @@
 
 </div>
 
-**Roo Scheduler** is a task scheduling extension for VS Code that seamlessly integrates with Roo Code. It allows you to automate recurring tasks and workflows directly within your development environment.
+**Roo Scheduler** is a task scheduling extension for VS Code that seamlessly integrates with Roo Code. It allows you to automate recurring tasks and workflows directly within your development environment.  
+
+This extension was created from a fork of Roo Code and designed using similar patterns/components to act as a functional community proof of concept and make it easier to merge if folks might want such a feature in Roo Code itself.
 
 ## Key Features
 

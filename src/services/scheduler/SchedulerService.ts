@@ -197,16 +197,34 @@ export class SchedulerService {
       this.log(`Not setting up timer for inactive schedule "${schedule.name}"`);
       return;
     }
+    
     if (schedule.scheduleType === 'time') {
+      // Check if schedule has expired before calculating next execution time
+ 
       const nextExecutionTime = this.calculateNextExecutionTime(schedule);
-      console.log('nextExecutionTime', nextExecutionTime)
+
       if (!nextExecutionTime) {
-        this.log(`Schedule "${schedule.name}" has no valid execution time or has expired`);
+        this.updateSchedule(schedule.id, { nextExecutionTime: undefined });
         return;
       }
 
+      let expirationDateTime;
+      if (schedule.expirationDate) {
+         expirationDateTime = new Date(
+          `${schedule.expirationDate}T${schedule.expirationHour || '23'}:${schedule.expirationMinute || '59'}:00`
+        );
+      }
+
+      console.log('nextExecutionTime:', nextExecutionTime)
+      if (nextExecutionTime && expirationDateTime && nextExecutionTime > expirationDateTime) {
+        console.log(`Schedule "${schedule.name}" has no valid execution time or has expired`);
+        this.updateSchedule(schedule.id, { active: false });
+      }
+
+      
+
       // Save the next execution time if it's different from the current value
-      const nextExecutionTimeStr = nextExecutionTime.toISOString();
+      const nextExecutionTimeStr = nextExecutionTime?.toISOString();
       if (schedule.nextExecutionTime !== nextExecutionTimeStr) {
         this.updateSchedule(schedule.id, { nextExecutionTime: nextExecutionTimeStr });
         
@@ -239,15 +257,7 @@ export class SchedulerService {
     const startDateTime = new Date(
       `${schedule.startDate || new Date().toISOString().split('T')[0]}T${schedule.startHour || '00'}:${schedule.startMinute || '00'}:00`
     );
-    // Check if schedule has expired
-    if (schedule.expirationDate) {
-      const expirationDateTime = new Date(
-        `${schedule.expirationDate}T${schedule.expirationHour || '23'}:${schedule.expirationMinute || '59'}:59`
-      );
-      if (now > expirationDateTime) {
-        return null;
-      }
-    }
+
 
     // If start time is in the future, return that
     if (now < startDateTime) {
@@ -260,7 +270,6 @@ export class SchedulerService {
     
     // Determine the most recent reference time (lastExecutionTime, lastSkippedTime, or startDateTime)
     let referenceTime: Date;
-    let useLastTime = false;
     
     if (schedule.lastExecutionTime || schedule.lastSkippedTime) {
       // Find the most recent of lastExecutionTime and lastSkippedTime
@@ -273,13 +282,12 @@ export class SchedulerService {
       } else {
         referenceTime = lastSkippedDate;
       }
-      useLastTime = true;
     } else {
       // No previous execution or skip, use start time
       referenceTime = new Date(startDateTime);
     }
     
-    if (useLastTime) {
+    /*if (useLastTime) {
       // Calculate from the reference time (last execution or skip)
       nextTime = new Date(referenceTime);
       
@@ -294,7 +302,7 @@ export class SchedulerService {
           nextTime.setDate(nextTime.getDate() + interval);
           break;
       }
-    } else {
+    } else {*/
       // First execution, calculate from start time
       nextTime = new Date(referenceTime);
       
@@ -318,7 +326,7 @@ export class SchedulerService {
         const periods = Math.ceil(diffMs / intervalMs);
         nextTime = new Date(nextTime.getTime() + (periods * intervalMs));
       }
-    }
+    
 
     // Check if we need to respect selected days
     if (schedule.selectedDays && Object.values(schedule.selectedDays).some(Boolean)) {
@@ -333,6 +341,74 @@ export class SchedulerService {
         const dayKey = Object.keys(dayMap).find(key => dayMap[key] === dayOfWeek);
         
         if (dayKey && schedule.selectedDays[dayKey]) {
+      
+          // Final check to ensure the next execution time is in the future
+          const now = new Date();
+          if (nextTime && nextTime <= now) {
+            this.log(`Calculated next execution time for "${schedule.name}" is in the past. Recalculating...`);
+            
+            // Calculate a new time in the future based on the interval
+            const interval = parseInt(schedule.timeInterval || '1');
+            let intervalMs = 0;
+            
+            switch (schedule.timeUnit) {
+              case 'minute':
+                intervalMs = interval * 60 * 1000;
+                break;
+              case 'hour':
+                intervalMs = interval * 60 * 60 * 1000;
+                break;
+              case 'day':
+                intervalMs = interval * 24 * 60 * 60 * 1000;
+                break;
+            }
+            
+            // If we have selected days, we need to handle them specially
+            if (schedule.selectedDays && Object.values(schedule.selectedDays).some(Boolean)) {
+              // Start from now and find the next valid day
+              nextTime = new Date(now);
+              // Set the time to the specified start time
+              nextTime.setHours(parseInt(schedule.startHour || '0'));
+              nextTime.setMinutes(parseInt(schedule.startMinute || '0'));
+              nextTime.setSeconds(0);
+              
+              // If the time today is already past, move to tomorrow
+              if (nextTime <= now) {
+                nextTime.setDate(nextTime.getDate() + 1);
+              }
+              
+              // Find the next valid day
+              const dayMap: Record<string, number> = {
+                sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6
+              };
+              
+              let daysChecked = 0;
+              while (daysChecked < 7) {
+                const dayOfWeek = nextTime.getDay();
+                const dayKey = Object.keys(dayMap).find(key => dayMap[key] === dayOfWeek);
+                
+                if (dayKey && schedule.selectedDays[dayKey]) {
+                  break; // Found a valid day
+                }
+                
+                // Move to next day
+                nextTime.setDate(nextTime.getDate() + 1);
+                daysChecked++;
+              }
+              
+              // If we've checked all days and none are selected, this schedule can't run
+              if (daysChecked >= 7) {
+                return null;
+              }
+            } else {
+              // For schedules without day constraints, simply add intervals until we're in the future
+              while (nextTime <= now) {
+                nextTime = new Date(nextTime.getTime() + intervalMs);
+              }
+            }
+            
+          }
+          
           return nextTime;
         }
         
@@ -358,6 +434,23 @@ private async executeSchedule(schedule: Schedule): Promise<void> {
     this.log(`Skipping execution of inactive schedule "${schedule.name}"`);
     return;
   }
+  
+  // Check if schedule has expired
+  if (schedule.expirationDate) {
+    const now = new Date();
+    const expirationDateTime = new Date(
+      `${schedule.expirationDate}T${schedule.expirationHour || '23'}:${schedule.expirationMinute || '59'}:00`
+    );
+    if (now > expirationDateTime) {
+      this.log(`Schedule "${schedule.name}" has expired. Setting to inactive but keeping expiration info.`);
+      await this.updateSchedule(schedule.id, {
+        active: false,
+        nextExecutionTime: undefined
+      });
+      return;
+    }
+  }
+  
   this.log(`Executing schedule "${schedule.name}"`);
 
   // Check if we should respect activity requirement

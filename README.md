@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="assets/icons/scheduler-icon.svg" alt="Roo Scheduler Icon" width="100" />
+  <img src="assets/icons/scheduler-icon.png" alt="Roo Scheduler Icon" width="100" />
 </div>
 
 <div align="center">
@@ -12,11 +12,6 @@
 **Roo Scheduler** is a task scheduling extension for VS Code that seamlessly integrates with Roo Code. It allows you to automate recurring tasks and workflows directly within your development environment.  
 
 This extension was created from a fork of Roo Code and designed using similar patterns/components to act as a functional community proof of concept and make it easier to merge if folks might want such a feature in Roo Code itself.
-
-Models used:
-- AI Coding: Sonnet 3.7 and GPT4.1 (~$20 total in initial release)
-- The rest of this README: Sonnet 3.7
-- Logo SVG: ChatGPT (free)
 
 ## Key Features
 

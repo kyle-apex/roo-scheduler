@@ -404,7 +404,15 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 														<div {...props} ref={ref} data-testid="virtuoso-item-list" />
 													)),
 												}}
-												itemContent={(index, schedule) => (
+												itemContent={(index, schedule) => { 
+													const expirationDateTime = new Date(
+														`${schedule.expirationDate}T${schedule.expirationHour || '23'}:${schedule.expirationMinute || '59'}:00`
+													  );
+													  const nextExecutionDateTime = schedule.nextExecutionTime
+														? new Date(schedule.nextExecutionTime)
+														: null;
+													
+													return (
 													<div
 														data-testid={`schedule-item-${schedule.id}`}
 														key={schedule.id}
@@ -570,30 +578,46 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 																  </div>
 																)}
 																
-																{schedule.active !== false && schedule.scheduleType === "time" && (
+																{schedule.active !== false && schedule.scheduleType === "time" && !(expirationDateTime && nextExecutionDateTime && expirationDateTime < nextExecutionDateTime) && (
 																  <div className="mt-1 text-xs text-vscode-descriptionForeground flex items-center">
 																    <span className="codicon codicon-calendar mr-1"></span>
 																    Next execution: &nbsp;{(() => {
+
+																      
 																      // Use stored nextExecutionTime if available, otherwise calculate it
-																      const nextTime = schedule.nextExecutionTime
-																        ? new Date(schedule.nextExecutionTime)
-																        : null;
+																      
 																        
-																      if (!nextTime) {
+																      if (!nextExecutionDateTime) {
 																        return <span className="italic">Not scheduled</span>;
 																      }
 																      
-																      const now = new Date();
-																      const timeDiff = nextTime.getTime() - now.getTime();
-																      const isUpcomingSoon = timeDiff <= 60 * 60 * 1000; // Within the next hour
 																      
 																      return (
 																        <span className='text-vscode-linkForeground'>
-																          {formatDateWithoutYearAndSeconds(nextTime.toISOString())}
-																          {isUpcomingSoon && (
-																            <span className="ml-1 text-vscode-notificationsInfoIcon">(soon)</span>
-																          )}
+																          {formatDateWithoutYearAndSeconds(nextExecutionDateTime.toISOString())}
+																          
 																        </span>
+																      );
+																    })()}
+																  </div>
+																)}
+																
+																{/* Expiration information */}
+																{schedule.expirationDate && (
+																  <div className="mt-1 text-xs text-vscode-descriptionForeground flex items-center">
+																    <span className="codicon codicon-error mr-1"></span>
+																    {(() => {
+																      const now = new Date();
+																      
+																      const isExpired = now > expirationDateTime;
+																      
+																      return (
+																        <>
+																          <span>{isExpired ? "Expired: " : "Expires: "}</span>
+																          <span className={isExpired ? "text-vscode-errorForeground ml-1" : "text-vscode-descriptionForeground ml-1"}>
+																            {formatDateWithoutYearAndSeconds(expirationDateTime.toISOString())}
+																          </span>
+																        </>
 																      );
 																    })()}
 																  </div>
@@ -601,7 +625,7 @@ const SchedulerView = ({ onDone }: SchedulerViewProps) => {
 															</div>
 														</div>
 													</div>
-												)}
+												)}}
 											/>
 										</div>
 									)}

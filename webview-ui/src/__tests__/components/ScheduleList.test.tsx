@@ -3,6 +3,15 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import ScheduleList from "../../components/scheduler/ScheduleList";
 import { Schedule } from "../../components/scheduler/types";
 
+// Mock react-virtuoso to render all items for testing
+jest.mock("react-virtuoso", () => ({
+  Virtuoso: ({ data, itemContent, ...props }: any) => (
+    <div data-testid="virtuoso-mock">
+      {data.map((item: any, index: number) => itemContent(index, item))}
+    </div>
+  ),
+}));
+
 const schedules: Schedule[] = [
   {
     id: "1",

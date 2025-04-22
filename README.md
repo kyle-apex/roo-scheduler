@@ -5,7 +5,7 @@
 <div align="center">
 <h1>Roo Scheduler</h1>
 
-<a href="https://marketplace.visualstudio.com/items?itemName=RooVeterinaryInc.roo-scheduler" target="_blank"><img src="https://img.shields.io/badge/Download%20on%20VS%20Marketplace-blue?style=for-the-badge&logo=visualstudiocode&logoColor=white" alt="Download on VS Marketplace"></a>
+<a href="https://marketplace.visualstudio.com/items?itemName=kyle-apex.roo-scheduler" target="_blank"><img src="https://img.shields.io/badge/Download%20on%20VS%20Marketplace-blue?style=for-the-badge&logo=visualstudiocode&logoColor=white" alt="Download on VS Marketplace"></a>
 
 </div>
 

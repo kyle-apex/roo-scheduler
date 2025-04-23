@@ -23,7 +23,6 @@ class MockSchedulerService {
   private schedules: any[] = [];
   private schedulesFilePath: string;
   private outputChannel: any;
-  private lastActivityTime: number = Date.now();
   private provider: any;
 
   private constructor(context: any) {
@@ -60,10 +59,6 @@ class MockSchedulerService {
     this.log('Initializing scheduler service');
     await this.loadSchedules();
     this.setupTimers();
-  }
-
-  private updateLastActivityTime(): void {
-    this.lastActivityTime = Date.now();
   }
 
   private async loadSchedules(): Promise<void> {
@@ -240,15 +235,6 @@ class MockSchedulerService {
     this.log(`Executing schedule "${schedule.name}"`);
 
     // Check if we should respect activity requirement
-    if (schedule.requireActivity) {
-      const lastExecutionTime = schedule.lastExecutionTime ? new Date(schedule.lastExecutionTime).getTime() : 0;
-      if (this.lastActivityTime <= lastExecutionTime) {
-        this.log(`Skipping execution of "${schedule.name}" due to no activity since last execution`);
-        // Set up the next timer
-        this.setupTimerForSchedule(schedule);
-        return;
-      }
-    }
 
     // Check for active task and handle skip logic
     if (typeof RooService.hasActiveTask === "function" && schedule.taskInteraction === "skip") {
@@ -1223,27 +1209,6 @@ describe('SchedulerService', () => {
       expect(setTimeout).toHaveBeenCalled();
     });
 
-    it('should skip execution if activity is required but no activity since last execution', async () => {
-      // Set up activity-based schedule with last execution time after last activity
-      const activitySchedule = {
-        ...sampleSchedules.schedules[4],
-        lastExecutionTime: '2025-04-11T10:30:00Z' // After current time (10:00 AM)
-      };
-
-      // Set last activity time to be before last execution
-      (schedulerService as any).lastActivityTime = new Date('2025-04-11T09:30:00Z').getTime();
-
-      await schedulerService.executeSchedule(activitySchedule);
-
-      // Verify that RooService.startTaskWithMode was not called
-      expect(mockStartTaskWithMode).not.toHaveBeenCalled();
-
-      // Verify that fs.writeFile was not called
-      expect(fs.writeFile).not.toHaveBeenCalled();
-
-      // Verify that a new timer was set up for the next execution
-      expect(setTimeout).toHaveBeenCalled();
-    });
   });
 
   describe('processTask', () => {

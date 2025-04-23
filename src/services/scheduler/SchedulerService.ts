@@ -44,17 +44,11 @@ export class SchedulerService {
   private schedules: Schedule[] = [];
   private schedulesFilePath: string;
   private outputChannel: vscode.OutputChannel;
-  private lastActivityTime: number = Date.now();
 
   private constructor(context: vscode.ExtensionContext) {
     this.schedulesFilePath = path.join(getWorkspacePath(), '.roo', 'schedules.json');
     this.outputChannel = vscode.window.createOutputChannel('Roo Scheduler');
     context.subscriptions.push(this.outputChannel);
-
-    // Track user activity
-    vscode.window.onDidChangeActiveTextEditor(() => this.updateLastActivityTime());
-    vscode.workspace.onDidChangeTextDocument(() => this.updateLastActivityTime());
-    vscode.window.onDidChangeWindowState(() => this.updateLastActivityTime());
   }
 
   public static getInstance(context: vscode.ExtensionContext): SchedulerService {
@@ -119,9 +113,6 @@ export class SchedulerService {
     return updatedSchedule;
   }
 
-  private updateLastActivityTime(): void {
-    this.lastActivityTime = Date.now();
-  }
 
   public async initialize(): Promise<void> {
      console.log('Initializing scheduler service!');
@@ -456,7 +447,8 @@ private async executeSchedule(schedule: Schedule): Promise<void> {
   // Check if we should respect activity requirement
   if (schedule.requireActivity) {
     const lastExecutionTime = schedule.lastExecutionTime ? new Date(schedule.lastExecutionTime).getTime() : 0;
-    if (this.lastActivityTime <= lastExecutionTime) {
+    const lastActivityTime = await RooService.getLastActivityTime(schedule.lastTaskId)
+    if (lastActivityTime && lastActivityTime <= lastExecutionTime) {
       this.log(`Skipping execution of "${schedule.name}" due to no activity since last execution`);
       // Set up the next timer
       this.setupTimerForSchedule(schedule);

@@ -56,31 +56,55 @@ export class RooService {
   }
 
   /**
+   * Returns the task history array from the Roo Cline API configuration,
+   * or undefined if there is no active task stack or no history.
+   * @private
+   */
+  private static getTaskHistoryAndStack(): {taskHistory: any[], taskStack: string[]} {
+    const api = RooService.getRooClineApi();
+    const taskStack = api.getCurrentTaskStack();
+
+    const config = api.getConfiguration();
+    const taskHistory = config.taskHistory || [];
+    
+    return {taskHistory,taskStack};
+  }
+
+  /**
    * Gets the timestamp of the last activity on the active task.
    * @returns The timestamp (ms since epoch) of the last activity, or undefined if not found.
    */
   public static async getLastActivityTimeForActiveTask(): Promise<number | undefined> {
-    const api = RooService.getRooClineApi();
-
-    // Get the current task stack and configuration
-    const taskStack = api.getCurrentTaskStack();
-    console.log('taskStack', taskStack);
+    const {taskStack, taskHistory} = this.getTaskHistoryAndStack();
     if (!taskStack || taskStack.length === 0) {
       return undefined;
     }
     const activeTaskId = taskStack[taskStack.length - 1];
-    const config = api.getConfiguration();
-    const taskHistory = config.taskHistory;
-    console.log('taskHistory', taskHistory);
-    if (!taskHistory || !Array.isArray(taskHistory)) {
-      return undefined;
-    }
+   
     // Find the last entry for the active task (most recent message)
     const activeTaskEntries = taskHistory.filter((entry: any) => entry.id === activeTaskId);
     if (!activeTaskEntries.length) {
       return undefined;
     }
     return activeTaskEntries[activeTaskEntries.length - 1].ts;
+  }
+
+  /**
+   * Gets the timestamp of the last activity, excluding a specific task if provided.
+   * @returns The timestamp (ms since epoch) of the last activity, or undefined if not found.
+   */
+  public static async getLastActivityTime(excludedTaskId?: string): Promise<number | undefined> {
+    let {taskHistory} = RooService.getTaskHistoryAndStack();
+    if (!taskHistory) {
+      return undefined;
+    }
+    if (excludedTaskId) {
+      taskHistory = taskHistory.filter((entry: any) => entry.id !== excludedTaskId);
+    }
+    if (!taskHistory.length) {
+      return undefined;
+    }
+    return taskHistory[taskHistory.length - 1].ts;
   }
 
   /**

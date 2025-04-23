@@ -116,22 +116,6 @@ export class SchedulerService {
 
   public async initialize(): Promise<void> {
      console.log('Initializing scheduler service!');
-     setTimeout(async () => {
-     try {
-       const lastActivityTime = await RooService.getLastActivityTimeForActiveTask();
-       this.log(
-         `RooService.getLastActivityTimeForActiveTask() called in initialize. Result: ${
-           lastActivityTime !== undefined ? lastActivityTime : "undefined"
-         }`
-       );
-     } catch (err) {
-       this.log(
-         `Error calling RooService.getLastActivityTimeForActiveTask() in initialize: ${
-           err instanceof Error ? err.message : String(err)
-         }`
-       );
-     }
-    }, 10000);
      await this.loadSchedules();
      this.setupTimers();
    }
@@ -278,22 +262,7 @@ export class SchedulerService {
       referenceTime = new Date(startDateTime);
     }
     
-    /*if (useLastTime) {
-      // Calculate from the reference time (last execution or skip)
-      nextTime = new Date(referenceTime);
-      
-      switch (schedule.timeUnit) {
-        case 'minute':
-          nextTime.setMinutes(nextTime.getMinutes() + interval);
-          break;
-        case 'hour':
-          nextTime.setHours(nextTime.getHours() + interval);
-          break;
-        case 'day':
-          nextTime.setDate(nextTime.getDate() + interval);
-          break;
-      }
-    } else {*/
+    
       // First execution, calculate from start time
       nextTime = new Date(referenceTime);
       
@@ -448,7 +417,9 @@ private async executeSchedule(schedule: Schedule): Promise<void> {
   if (schedule.requireActivity) {
     const lastExecutionTime = schedule.lastExecutionTime ? new Date(schedule.lastExecutionTime).getTime() : 0;
     const lastActivityTime = await RooService.getLastActivityTime(schedule.lastTaskId)
-    if (lastActivityTime && lastActivityTime <= lastExecutionTime) {
+    console.log('lastActivityTime', lastActivityTime);  
+    console.log('lastExecutionTime', lastExecutionTime);
+    if (lastActivityTime && lastActivityTime < lastExecutionTime) {
       this.log(`Skipping execution of "${schedule.name}" due to no activity since last execution`);
       // Set up the next timer
       this.setupTimerForSchedule(schedule);

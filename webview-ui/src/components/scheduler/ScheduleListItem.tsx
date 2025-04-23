@@ -120,6 +120,9 @@ const ScheduleListItem: React.FC<ScheduleListItemProps> = ({
                   • {Object.values(schedule.selectedDays || {}).filter(Boolean).length} days selected
                 </span>
               )}
+              {schedule.requireActivity && (
+                <span> • Only after activity</span>
+              )}
             </div>
           )}
 

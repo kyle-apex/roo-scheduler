@@ -25,6 +25,26 @@ describe("Checkbox", () => {
     expect(handleChange).toHaveBeenCalledWith(false);
   });
 
+  it("checks the box when clicking the label if unchecked", () => {
+    const handleChange = jest.fn();
+    const { getByText } = render(
+      <Checkbox checked={false} onChange={handleChange} label="Test Checkbox" />
+    );
+    const label = getByText("Test Checkbox");
+    fireEvent.click(label);
+    expect(handleChange).toHaveBeenCalledWith(true);
+  });
+
+  it("does not uncheck the box when clicking the label if already checked", () => {
+    const handleChange = jest.fn();
+    const { getByText } = render(
+      <Checkbox checked={true} onChange={handleChange} label="Test Checkbox" />
+    );
+    const label = getByText("Test Checkbox");
+    fireEvent.click(label);
+    expect(handleChange).not.toHaveBeenCalled();
+  });
+
   it("calls onChange on space/enter keydown", () => {
     const handleChange = jest.fn();
     const { getByRole } = render(

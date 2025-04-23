@@ -67,6 +67,26 @@ const schedules: Schedule[] = [
     updatedAt: "2025-04-15T20:00:00.000Z",
     active: false,
   },
+  {
+    id: "3",
+    name: "Activity-Based Task",
+    mode: "focus",
+    modeDisplayName: "Focus",
+    taskInstructions: "Run after user activity",
+    scheduleType: "time",
+    timeInterval: "2",
+    timeUnit: "hour",
+    selectedDays: { monday: true, wednesday: true, friday: true },
+    startDate: "2025-04-22",
+    startHour: "10",
+    startMinute: "00",
+    requireActivity: true,
+    taskInteraction: "wait",
+    inactivityDelay: "5",
+    createdAt: "2025-04-01T10:00:00.000Z",
+    updatedAt: "2025-04-15T10:00:00.000Z",
+    active: true,
+  },
 ];
 
 const formatDate = (dateString: string) => "formatted:" + dateString;
@@ -85,6 +105,27 @@ describe("ScheduleList", () => {
     );
     expect(screen.getByText("Morning Routine")).toBeInTheDocument();
     expect(screen.getByText("Evening Review")).toBeInTheDocument();
+    expect(screen.getByText("Activity-Based Task")).toBeInTheDocument();
+  });
+
+  it("displays 'Only after activity' for schedules with requireActivity set to true", () => {
+    // Import ScheduleListItem directly to test it
+    const ScheduleListItem = require("../../components/scheduler/ScheduleListItem").default;
+    
+    // Render the ScheduleListItem directly with the schedule that has requireActivity=true
+    render(
+      <ScheduleListItem
+        schedule={schedules[2]} // The Activity-Based Task with requireActivity=true
+        onEdit={jest.fn()}
+        onDelete={jest.fn()}
+        onToggleActive={jest.fn()}
+        onResumeTask={jest.fn()}
+        formatDate={formatDate}
+      />
+    );
+    
+    // Now check for the text using a more flexible approach
+    expect(screen.getByText(/Only after activity/)).toBeInTheDocument();
   });
 
   it("calls onEdit when item is clicked", () => {

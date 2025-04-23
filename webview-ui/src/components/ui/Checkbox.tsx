@@ -19,10 +19,36 @@ const Checkbox: React.FC<CheckboxProps> = ({
   disabled = false,
   "aria-label": ariaLabel,
 }) => {
+  // Handler: only check if currently unchecked
+  const handleLabelClick = (e: React.MouseEvent<HTMLLabelElement>) => {
+    if (disabled) return;
+    // Only toggle if currently unchecked
+    if (!checked) {
+      onChange(true);
+    }
+  };
+
+  // Handler for checkbox span (keyboard and mouse)
+  const handleCheckboxClick = (e: React.MouseEvent<HTMLSpanElement>) => {
+    if (disabled) return;
+    onChange(!checked);
+    // Prevent label's onClick from firing
+    e.stopPropagation();
+  };
+
+  const handleCheckboxKeyDown = (e: React.KeyboardEvent<HTMLSpanElement>) => {
+    if (disabled) return;
+    if (e.key === " " || e.key === "Enter") {
+      e.preventDefault();
+      onChange(!checked);
+    }
+  };
+
   return (
     <label
       className={`flex items-center cursor-pointer select-none ${className} ${disabled ? "opacity-60 pointer-events-none" : ""}`}
       htmlFor={id}
+      onClick={handleLabelClick}
     >
       <span
         className={`w-4 h-4 min-w-4 min-h-4 flex-shrink-0 border rounded-xs flex items-center justify-center mr-2 transition-colors
@@ -36,15 +62,8 @@ const Checkbox: React.FC<CheckboxProps> = ({
         aria-checked={checked}
         aria-label={ariaLabel}
         id={id}
-        onClick={e => {
-          if (!disabled) onChange(!checked);
-        }}
-        onKeyDown={e => {
-          if (!disabled && (e.key === " " || e.key === "Enter")) {
-            e.preventDefault();
-            onChange(!checked);
-          }
-        }}
+        onClick={handleCheckboxClick}
+        onKeyDown={handleCheckboxKeyDown}
         style={{ outline: "none" }}
       >
         {checked && (

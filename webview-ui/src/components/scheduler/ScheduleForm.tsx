@@ -244,9 +244,9 @@ const ScheduleForm = forwardRef<ScheduleFormHandle, ScheduleFormProps>(
 				console.error("Expiration time must be after start time")
 				return
 			}
-
+	
 			let formToSave = form
-
+	
 			// If hasExpiration is false, clear expiration fields
 			if (!hasExpiration) {
 				formToSave = {
@@ -256,7 +256,17 @@ const ScheduleForm = forwardRef<ScheduleFormHandle, ScheduleFormProps>(
 					expirationMinute: "00",
 				}
 			}
-
+	
+			// If hasStartDate is false, clear start date fields
+			if (!hasStartDate) {
+				formToSave = {
+					...formToSave,
+					startDate: "",
+					startHour: "",
+					startMinute: "00",
+				}
+			}
+	
 			// If hasDaysOfWeek is false, set all days to be selected
 			if (!hasDaysOfWeek) {
 				formToSave = {
@@ -264,7 +274,7 @@ const ScheduleForm = forwardRef<ScheduleFormHandle, ScheduleFormProps>(
 					selectedDays: { ...allDaysSelected },
 				}
 			}
-
+	
 			onSave(formToSave)
 		}
 

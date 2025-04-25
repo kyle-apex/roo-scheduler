@@ -44,6 +44,11 @@ Roo Scheduler connects with [Roo Code](https://roocode.com/)'s extension points 
 - **Codebase Analysis**: Run periodic analysis to identify optimization opportunities
 - **Custom Workflows**: Automate any repetitive development task with natural language instructions (tests, memory bank, MCP etc)
 
+## Usage Tips
+
+- Currently, this extension will not wake up your computer to run a task.  It will run tasks if the screen is locked.  When VS Code “wakes up,” either when a computer starts or another background process is run, then any pending tasks will be run.
+- Intervals are calculated differently depending on if start date time is specified.  For example, for an hourly task, if I have start date/time specified at 10:00am and the execution is delayed until 10:15am due to inactivity interruption delays or the computer being off/asleep, then the next task is scheduled for 11:00am. If I don’t specify start time, the hour interval is calculated from the last execution time, so the next execution will be 11:15am
+
 ## License
 
 [Apache 2.0 © 2025 Roo Scheduler](./LICENSE)

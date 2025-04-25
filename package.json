@@ -3,7 +3,7 @@
 	"displayName": "Roo Scheduler",
 	"description": "A task scheduler for Roo Code",
 	"publisher": "KyleHoskins",
-	"version": "0.0.9",
+	"version": "0.0.10",
 	"icon": "assets/icons/scheduler-icon.png",
 	"galleryBanner": {
 		"color": "#617A91",

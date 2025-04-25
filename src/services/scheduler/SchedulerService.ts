@@ -228,7 +228,7 @@ export class SchedulerService {
 
     const now = new Date();
     const startDateTime = new Date(
-      `${schedule.startDate || new Date().toISOString().split('T')[0]}T${schedule.startHour || '00'}:${schedule.startMinute || '00'}:00`
+      `${schedule.startDate || new Date().toISOString().split('T')[0]}T${schedule.startDate ? schedule.startHour : new Date().getHours().toString().padStart(2, '0')}:${schedule.startMinute || '00'}:00`
     );
 
 
@@ -244,7 +244,10 @@ export class SchedulerService {
     // Determine the most recent reference time (lastExecutionTime, lastSkippedTime, or startDateTime)
     let referenceTime: Date;
     
-    if (schedule.lastExecutionTime || schedule.lastSkippedTime) {
+    // If startDate was configured, we want our intervals based on that 
+    // (ex: keep running on the hour even if the last execution was delayed 5 minutes)
+    // Otherwise, we want to set based on execution or skip time
+    if ((schedule.lastExecutionTime || schedule.lastSkippedTime) && !schedule.startDate) {
       // Find the most recent of lastExecutionTime and lastSkippedTime
       const lastExecutionDate = schedule.lastExecutionTime ? new Date(schedule.lastExecutionTime) : new Date(0);
       const lastSkippedDate = schedule.lastSkippedTime ? new Date(schedule.lastSkippedTime) : new Date(0);
@@ -377,8 +380,8 @@ export class SchedulerService {
         // Move to next day
         nextTime.setDate(nextTime.getDate() + 1);
         // Reset to the specified time
-        nextTime.setHours(parseInt(schedule.startHour || '0'));
-        nextTime.setMinutes(parseInt(schedule.startMinute || '0'));
+          nextTime.setHours(parseInt(schedule.startHour || '0'));
+          nextTime.setMinutes(parseInt(schedule.startMinute || '0'));
         nextTime.setSeconds(0);
         
         daysChecked++;

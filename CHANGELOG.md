@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.0.11] - 2025-05-31
+
+### Added
+- Upgraded to Roo Code's latest custom_modes.yaml support
+
 ## [0.0.10] - 2025-04-25
 
 ### Fixed

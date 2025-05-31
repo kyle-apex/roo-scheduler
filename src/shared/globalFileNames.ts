@@ -6,5 +6,5 @@ export const GlobalFileNames = {
 	requestyModels: "requesty_models.json",
 	mcpSettings: "mcp_settings.json",
 	unboundModels: "unbound_models.json",
-	customModes: "custom_modes.json",
+	customModes: "custom_modes.yaml",
 }
